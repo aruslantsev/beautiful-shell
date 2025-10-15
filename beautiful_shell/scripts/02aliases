@@ -1,0 +1,7 @@
+if [ -f ~/.${SHELL_NAME}_aliases ]; then
+	. ~/.${SHELL_NAME}_aliases
+fi
+
+if [ -f ~/.aliases ]; then
+	. ~/.aliases
+fi

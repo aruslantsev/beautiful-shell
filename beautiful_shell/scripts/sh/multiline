@@ -1,0 +1,43 @@
+. ${BS_PATH_PREFIX}/scripts/timer
+. ${BS_PATH_PREFIX}/scripts/system
+. ${BS_PATH_PREFIX}/scripts/devtools
+
+if [ "$IS_ROOT" = 1 ]; then
+	OK_COLOR=$PS1_GREY
+else
+	OK_COLOR=$PS1_GREEN
+fi
+ERR_COLOR=$PS1_RED
+
+case ${BS_SHELL_NAME} in
+	"bash")
+		EXITCODE="\$(exitcode=\$?; if [ \${exitcode} = 0 ]; then echo -n \"${OK_COLOR}\"; else echo -n \"${ERR_COLOR}\"; fi; echo -n \"[\${exitcode}|\$(get_exectime)]\"; echo \"${PS1_RESET}\")"
+		;;
+	"sh" | "ash")
+		print_warn "Execution time in multiline prompt is not supported in ${BS_SHELL_NAME}"
+		EXITCODE="\$(exitcode=\$?; if [ \${exitcode} = 0 ]; then echo -n \"${OK_COLOR}\"; else echo -n \"${ERR_COLOR}\"; fi; echo -n \"[\${exitcode}]\"; echo \"${PS1_RESET}\")"
+		;;
+esac
+
+JOBS_INFO="\$(JOBS=\$(get_jobs); if [ -n \"\${JOBS}\" ]; then echo \"${PS1_YELLOW}[\${JOBS}]${PS1_RESET} \"; fi)"
+
+DEVTOOLS_STR="\$(status_str=\$(get_devtools_str); if [ -n \"\${status_str}\" ]; then echo \"\n│  ${PS1_GREY}\${status_str}${PS1_RESET}\"; else echo -n; fi)"
+
+SYSTEM_LOAD="${PS1_GREY}\$(get_system_load)${PS1_RESET}"
+
+TIME="${PS1_GREY}\$(date +\"%F %T\").${PS1_RESET}"
+
+SSH="\$(if [ -n \"\${SSH_CONNECTION}\" ]; then echo \"${PS1_YELLOW}[SSH]${PS1_RESET} \"; fi)"
+
+if [ "$IS_ROOT" = 1 ]; then
+	PS1="\[\e]0;\u@\h:\w\a\]${PS1_RED}\h ${PS1_BLUE}\w \\\$${PS1_RESET}"
+else
+	PS1="\[\e]0;\u@\h:\w\a\]${PS1_GREEN}\u@\h ${PS1_BLUE}\w \\\$${PS1_RESET}"
+fi
+PS1="┌─ ${EXITCODE} ${TIME} ${SYSTEM_LOAD} ${DEVTOOLS_STR}\n└─ ${SSH}${JOBS_INFO}${PS1} "
+
+# ┌─┬─┐
+# │ │ │
+# ├─┼─┤
+# │ │ │
+# └─┴─┘

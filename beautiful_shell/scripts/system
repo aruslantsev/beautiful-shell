@@ -1,0 +1,157 @@
+if [ -z "$OSTYPE" ]; then
+	os_name=$(uname)
+	case ${os_name} in
+		Linux)
+			OSTYPE="linux"
+			;;
+		Darwin)
+			OSTYPE="darwin"
+			;;
+		*BSD*)
+			OSTYPE="bsd"
+			;;
+		*)
+			OSTYPE="unknown"
+	esac
+	print_info "OSTYPE is not set. Guessed $OSTYPE"
+fi
+
+case "$OSTYPE" in
+	linux*)
+		# total_cpus=$(grep processor /proc/cpuinfo | wc -l)
+		total_mem_mb=$(free -m | awk 'NR==2{printf $2 }')
+
+		loadavg () {
+			awk '{printf "LoadAvg: %s, %s, %s", $1, $2, $3}' /proc/loadavg
+		}
+		get_mem () {
+			# mem=$(free -m | awk 'NR==2{printf "Mem: %.0f/%.0fGB (%.0f%%)\n", $3/1024,$2/1024,$3*100/$2 }')
+			# swap=$(free -m | awk 'NR==3{printf "Swp: %.0f/%.0fGB (%.0f%%)\n", $3/1024,$2/1024,$3*100/$2 }')
+			if [ ${total_mem_mb} -ge 8192 ]; then
+				mem=$(free -g | awk 'NR==2{printf "Mem: %.0f/%.0fGB\n", $3,$2 }')
+				swap=$(free -g | awk 'NR==3{printf "Swap: %.0f/%.0fGB\n", $3,$2 }')
+			else
+				mem=$(free -m | awk 'NR==2{printf "Mem: %.0f/%.0fMB\n", $3,$2 }')
+				swap=$(free -m | awk 'NR==3{printf "Swap: %.0f/%.0fMB\n", $3,$2 }')
+			fi
+			echo "${mem}, ${swap}"
+		}
+		get_system_load () {
+			echo "$(loadavg). $(get_mem)"
+		}
+		;;
+	darwin*)
+		loadavg  () {
+			sysctl -n vm.loadavg | awk '{printf "LoadAvg: %s, %s, %s", $2, $3, $4}'
+		}
+		get_mem () {
+			total_mem=$(sysctl -n hw.memsize)
+			page_size=$(vm_stat | head -n 1 | grep --color=never -o -E "[0-9]+")
+			free_count=$(vm_stat | grep --color=never "Pages free" | grep --color=never -o -E "[0-9]+")
+			speculative_count=$(vm_stat | grep --color=never "Pages speculative" | grep --color=never -o -E "[0-9]+")
+			inactive_count=$(vm_stat | grep --color=never "Pages inactive" | grep --color=never -o -E "[0-9]+")
+			purgeable_count=$(vm_stat | grep --color=never "Pages purgeable" | grep --color=never -o -E "[0-9]+")
+			used_mem=$((${total_mem}-(${free_count}+${speculative_count}+${purgeable_count}+${inactive_count})*${page_size}))
+			total_mem=$((${total_mem}/1024/1024))
+			used_mem=$((${used_mem}/1024/1024))
+			swap_total=$(sysctl -n vm.swapusage | awk '{print $3}')
+			swap_used=$(sysctl -n vm.swapusage | awk '{print $6}')
+			unit=${swap_total: -1}
+			swap_total=${swap_total%.*}
+			swap_used=${swap_used%.*}
+			if [ $unit = "G" ]; then
+				swap_total=$((${swap_total}*1024))
+				swap_used=$((${swap_used}*1024))
+			fi
+			if [ ${total_mem} -ge 8192 ]; then
+				total_mem=$((${total_mem}/1024))
+				used_mem=$((${used_mem}/1024))
+				mem="Mem: ${used_mem}/${total_mem}GB"
+				swap_total=$((${swap_total}/1024))
+				swap_used=$((${swap_used}/1024))
+				swap="Swap: ${swap_used}/${swap_total}GB"
+			else
+				mem="Mem: ${used_mem}/${total_mem}MB"
+				swap="Swap: ${swap_used}/${swap_total}MB"
+			fi
+			echo "${mem}, ${swap}"
+		}
+		get_system_load () {
+			echo "$(loadavg). $(get_mem)"
+		}
+		;;
+	*bsd*)
+		total_mem_mb=$(($(sysctl -n hw.physmem)/1024/1024))
+		loadavg  () {
+			sysctl -n vm.loadavg | awk '{printf "LoadAvg: %s, %s, %s", $2, $3, $4}'
+		}
+		get_mem () {
+			free_mem_mb=$(($(sysctl -a | grep "Free Memory" | cut -d":" -f2 | xargs | sed 's/.$//')/1024))
+			used_mem=$((total_mem_mb - free_mem_mb))
+			if [ ${total_mem_mb} -ge 8192 ]; then
+				opt="-g"
+				unit="GB"
+				total_mem=$((total_mem_mb/1024))
+				used_mem=$((used_mem/1024))
+			else
+				total_mem=$total_mem_mb
+				opt="-m"
+				unit="MB"
+			fi
+			mem="Mem: ${used_mem}/${total_mem}${unit}"
+			if [ ! -z "$(swapinfo -m | grep Total)" ]; then
+				swap="$(swapinfo ${opt} | grep Total | awk '{printf "Swap: %.0f/%.0f", $3, $2}')${unit}"
+			else
+				swap="$(swapinfo ${opt} | awk 'NR==2{printf "Swap: %.0f/%.0f", $3, $2}')${unit}"
+			fi
+			echo "${mem}, ${swap}"
+		}
+		get_system_load () {
+			echo "$(loadavg). $(get_mem)"
+		}
+		;;
+	*)
+		get_system_load () {
+			echo -n
+		}
+esac
+
+case "$BS_SHELL_NAME" in
+	"bash" | "ash" | "sh" )
+			get_jobs () {
+				JOBS=$(jobs | awk '{ print $2 }' | sort | uniq -c)
+				num_running=$(grep Running <<< $JOBS | awk '{print $1}')
+				num_stopped=$(grep Stopped <<< $JOBS | awk '{print $1}')
+				jobsstr=""
+				if [ -n "$num_running" ]; then
+					jobsstr="${jobsstr}R${num_running}"
+				fi
+				if [ -n "$num_stopped" ]; then
+					jobsstr="${jobsstr}S${num_stopped}"
+				fi
+				if [ -n "$jobsstr" ]; then
+					jobsstr="J:${jobsstr}"
+				fi
+				echo $jobsstr
+			}
+		;;
+	"zsh")
+		get_jobs () {
+				JOBS=$(jobs | awk '{ print $3 }' | sort | uniq -c)
+				num_running=$(grep running <<< $JOBS | awk '{print $1}')
+				num_stopped=$(grep suspended <<< $JOBS | awk '{print $1}')
+				jobsstr=""
+				if [ -n "$num_running" ]; then
+					jobsstr="${jobsstr}R${num_running}"
+				fi
+				if [ -n "$num_stopped" ]; then
+					jobsstr="${jobsstr}S${num_stopped}"
+				fi
+				if [ -n "$jobsstr" ]; then
+					jobsstr="J:${jobsstr}"
+				fi
+				echo $jobsstr
+			}
+		;;
+esac
+

@@ -1,0 +1,47 @@
+if [ -n "$BASH_VERSION" ]; then
+	BS_SHELL_NAME="bash"
+elif [ -n "$ZSH_VERSION" ]; then
+	BS_SHELL_NAME="zsh"
+else
+    BS_SHELL_NAME=$(echo ${0##*/} | sed 's/^-*//')  # ${SHELL##*/} is login shell
+fi
+
+case "$BS_SHELL_NAME" in
+	"bash" | "sh" | "ash" | "zsh")
+		;;
+	*)
+		echo "Unsupported shell ${BS_SHELL_NAME}"
+		BS_SHELL_NAME=""
+esac
+
+BS_PATH_PREFIX="${HOME}/.beautiful_shell"
+
+
+if [ ! -z "${BS_SHELL_NAME}" ]; then
+	. ${BS_PATH_PREFIX}/scripts/config
+
+	if [ ! -f "${BS_PATH_PREFIX}/config" ]; then
+		bs_default_config
+		bs_write_config
+	fi
+	. ${BS_PATH_PREFIX}/config
+
+	. ${BS_PATH_PREFIX}/scripts/messages
+
+	print_info "For Beautiful Shell information, run bs_info\n"
+	. ${BS_PATH_PREFIX}/scripts/info
+
+	if [ "$UID" = 0 ] || [ $(whoami) = "root" ]; then
+		IS_ROOT=1
+		print_warn "Runnung as root"
+	else
+		IS_ROOT=0
+	fi
+
+	. ${BS_PATH_PREFIX}/scripts/00path
+	. ${BS_PATH_PREFIX}/scripts/01ps1
+	. ${BS_PATH_PREFIX}/scripts/02aliases
+	. ${BS_PATH_PREFIX}/scripts/03environment
+	. ${BS_PATH_PREFIX}/scripts/10ssh-agent
+	. ${BS_PATH_PREFIX}/scripts/20history
+fi

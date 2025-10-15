@@ -1,0 +1,8 @@
+if [ -d ~/.local/bin ]; then
+	export PATH=$PATH:~/.local/bin
+fi
+
+if [ -f ~/.paths ]; then
+	. ~/.paths
+fi
+

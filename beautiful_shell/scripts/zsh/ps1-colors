@@ -1,0 +1,12 @@
+autoload -U colors && colors
+PS1_RESET="%F{reset}"
+PS1_BLACK="%F{black}"
+PS1_RED="%F{red}"
+PS1_GREEN="%F{green}"
+PS1_YELLOW="%F{yellow}"
+PS1_BLUE="%F{blue}"
+PS1_MAGENTA="%F{magenta}"
+PS1_CYAN="%F{cyan}"
+PS1_WHITE="%F{whilte}"
+# PS1_GREY="%F{grey}"
+PS1_GREY="%F{8}"

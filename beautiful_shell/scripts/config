@@ -1,0 +1,186 @@
+bs_default_config () {
+	export SAVE_HISTORY=${SAVE_HISTORY:-0}
+	export USE_COLORS=${USE_COLORS:-1}
+	export SIMPLE_PROMPT=${SIMPLE_PROMPT:-0}
+	export RUN_SSH_AGENT=${RUN_SSH_AGENT:-1}
+	export SHOW_GIT_STATUS=${SHOW_GIT_STATUS:-1}
+	export SHOW_CONDA_STATUS=${SHOW_CONDA_STATUS:-1}
+	export SHOW_IDF_STATUS=${SHOW_IDF_STATUS:-1}
+}
+
+bs_write_config () {
+	echo -e "SAVE_HISTORY=${SAVE_HISTORY}\nUSE_COLORS=${USE_COLORS}\nSIMPLE_PROMPT=${SIMPLE_PROMPT}\nRUN_SSH_AGENT=${RUN_SSH_AGENT}\nSHOW_GIT_STATUS=${SHOW_GIT_STATUS}\nSHOW_CONDA_STATUS=${SHOW_CONDA_STATUS}\nSHOW_IDF_STATUS=${SHOW_IDF_STATUS}" > ${BS_PATH_PREFIX}/config
+}
+
+bs_config () {
+	ans=""
+	while [ "$ans" != "e" ] && [ "$ans" != "E" ]; do
+		echo "Select an option"
+		echo "1. Shell history"
+		echo "2. Colors"
+		echo "3. Prompt"
+		echo "4. SSH agent"
+		echo "5. Development tools"
+		echo "S. Save configuration"
+		echo "E. Exit"
+		echo -n "> "
+		read ans
+		case $ans in
+			"1")
+				bs_set_histcontrol
+				;;
+			"2")
+				bs_set_color
+				;;
+			"3")
+				bs_set_prompt
+				;;
+			"4")
+				bs_set_ssh_agent
+				;;
+			"5")
+				bs_set_devtools
+				;;
+			"S" | "s")
+				bs_write_config
+				echo "Configuration saved"
+				;;
+		esac
+	done
+}
+
+bs_set_histcontrol () {
+	echo "Enter 0 not to shell history, 1 to save shell history. Default value: 0. Current value: ${SAVE_HISTORY}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export SAVE_HISTORY=0
+		;;
+	"1")
+		export SAVE_HISTORY=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}
+
+bs_set_color () {
+	echo "Enter 0 to use B&W prompt and output, 1 to use colors. Default value: 1. Current value: ${USE_COLORS}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export USE_COLORS=0
+		;;
+	"1")
+		export USE_COLORS=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}
+
+bs_set_prompt () {
+	echo "Enter 0 to use multiline prompt, 1 to use simple prompt. Default value: 0. Current value: ${SIMPLE_PROMPT}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export SIMPLE_PROMPT=0
+		;;
+	"1")
+		export SIMPLE_PROMPT=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}
+
+bs_set_ssh_agent () {
+	echo "Enter 0 not to start ssh-agent after first login, 1 to start ssh-agent. Default value: 1. Current value: ${RUN_SSH_AGENT}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export RUN_SSH_AGENT=0
+		;;
+	"1")
+		export RUN_SSH_AGENT=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}
+
+bs_set_devtools () {
+	ans=""
+	while [ "$ans" != "e" ] && [ "$ans" != "E" ]; do
+		echo "Select an option"
+		echo "1. GIT"
+		echo "2. Miniconda/Anaconda"
+		echo "3. ESP IDF"
+		echo "E. Exit to previous menu"
+		echo -n "> "
+		read ans
+		case $ans in
+			"1")
+				bs_set_git_status
+				;;
+			"2")
+				bs_set_conda_status
+				;;
+			"3")
+				bs_set_esp_idf_status
+				;;
+		esac
+	done
+}
+
+bs_set_git_status () {
+	echo "Enter 0 not to show git status (branch, staged files, etc.), 1 to show git status. Default value: 1. Current value: ${SHOW_GIT_STATUS}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export SHOW_GIT_STATUS=0
+		;;
+	"1")
+		export SHOW_GIT_STATUS=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}
+
+bs_set_conda_status () {
+	echo "Enter 0 not to show Miniconda/Anaconda environment, 1 to show Miniconda/Anaconda environment. Default value: 1. Current value: ${SHOW_CONDA_STATUS}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export SHOW_CONDA_STATUS=0
+		;;
+	"1")
+		export SHOW_CONDA_STATUS=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}
+
+bs_set_esp_idf_status () {
+	echo "Enter 0 not to show active ESP IDF version, 1 to show active ESP IDF version. Default value: 1. Current value: ${SHOW_IDF_STATUS}."
+	echo -n "> "
+	read ans
+	case $ans in
+	"0")
+		export SHOW_IDF_STATUS=0
+		;;
+	"1")
+		export SHOW_IDF_STATUS=1
+		;;
+	*)
+		echo "Invalid value"
+	esac
+}

@@ -1,0 +1,25 @@
+bs_info () {
+	echo
+	echo -e "Beautiful Shell can control\n\
+	- Shell history\n\
+	- Colors in prompt and its own output\n\
+	- Start SSH agent after login\n\
+	- Prompt: use simple prompt like 'user@host path $' or multiline prompt\n\
+	- Information in multiline prompt"
+	echo
+	echo "If ~/.local/bin exists, it is included in PATH variable. Other paths can be specified in ~/.paths file in format PATH=\"\$PATH:/your/path/0:/your/path/1:...\""
+	echo "Aliases for current shell are applied from file ~/.\$SHELL_aliases, e.g. ~/.bash_aliases"
+	echo "Aliases for all shells are applied from ~/.aliases"
+	echo "Environment variables are sourced from ~/.environment file"
+	echo
+	echo "Defaults:"
+	echo "Shell history is not saved"
+	echo "Colored prompt and own output is used"
+	echo "After first login after boot SSH agent is started"
+	echo "Multiline prompt is used"
+	echo "Information in multiline prompt: exitcode, execution time (if supported), date and time, load average, memory consumption, user, host, path"
+	echo "Optional information in multiline prompt (can be configured, enabled by default): git status (available in bash/zsh), conda env, esp idf version"
+	echo
+	echo "To configure Beautiful Shell run bs_config"
+	echo
+}
