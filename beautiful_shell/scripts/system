@@ -120,8 +120,8 @@ case "$BS_SHELL_NAME" in
 	"bash" | "ash" | "sh" )
 			get_jobs () {
 				JOBS=$(jobs | awk '{ print $2 }' | sort | uniq -c)
-				num_running=$(grep Running <<< $JOBS | awk '{print $1}')
-				num_stopped=$(grep Stopped <<< $JOBS | awk '{print $1}')
+				num_running=$(echo $JOBS | grep running | awk '{print $1}')
+				num_stopped=$(echo $JOBS | grep suspended | awk '{print $1}')
 				jobsstr=""
 				if [ -n "$num_running" ]; then
 					jobsstr="${jobsstr}R${num_running}"
@@ -138,8 +138,8 @@ case "$BS_SHELL_NAME" in
 	"zsh")
 		get_jobs () {
 				JOBS=$(jobs | awk '{ print $3 }' | sort | uniq -c)
-				num_running=$(grep running <<< $JOBS | awk '{print $1}')
-				num_stopped=$(grep suspended <<< $JOBS | awk '{print $1}')
+				num_running=$(echo $JOBS | grep running | awk '{print $1}')
+				num_stopped=$(echo $JOBS | grep suspended | awk '{print $1}')
 				jobsstr=""
 				if [ -n "$num_running" ]; then
 					jobsstr="${jobsstr}R${num_running}"
