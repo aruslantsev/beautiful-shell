@@ -1,34 +1,34 @@
-if [ ${SHOW_CONDA_STATUS:-0} -eq 1 ] && [ -d ~/miniconda3 ]; then
-	eval "$(~/miniconda3/bin/conda shell.${BS_SHELL_NAME} hook)"
+if [ ${_BS_SHOW_CONDA_STATUS:-0} -eq 1 ] && [ -d ~/miniconda3 ]; then
+	eval "$(~/miniconda3/bin/conda shell.${_BS_SHELL_NAME} hook)"
 	conda deactivate
 
 	if [ ! -f ~/.condarc ]; then
-		print_warn "~/.condarc is missing, creating it now"
+		__bs_print_warn "~/.condarc is missing, creating it now"
 		touch ~/.condarc
 	fi
 	grep -i "changeps1:[[:space:]]?*false" ~/.condarc > /dev/null || conda config --set changeps1 False
 
-	get_conda_env () {
+	__bs_get_conda_env () {
 		if [ ! -z "${CONDA_DEFAULT_ENV}" ]; then
 			echo "Conda: ${CONDA_DEFAULT_ENV}"
 		fi
 	}
 else
-	get_conda_env () {
+	__bs_get_conda_env () {
 		echo -n
 	}
 fi
 
-if [ ${SHOW_GIT_STATUS:-0} -eq 1 ] && [ ! -z "$(which git 2> /dev/null)" ]; then
-	case ${BS_SHELL_NAME} in
+if [ ${_BS_SHOW_GIT_STATUS:-0} -eq 1 ] && [ ! -z "$(which git 2> /dev/null)" ]; then
+	case ${_BS_SHELL_NAME} in
 		"bash" | "zsh")
-			. ${BS_PATH_PREFIX}/scripts/git_prompt.sh
+			. ${_BS_PATH_PREFIX}/scripts/git_prompt.sh
 			export GIT_PS1_SHOWDIRTYSTATE=1
 			export GIT_PS1_SHOWSTASHSTATE=1
 			export GIT_PS1_SHOWUNTRACKEDFILES=1
 			export GIT_PS1_SHOWUPSTREAM=auto
 
-			get_git_status () {
+			__bs_get_git_status () {
 				git_status=$(__git_ps1)
 				if [ -n "${git_status}" ]; then
 					echo "Git: ${git_status}" | xargs
@@ -36,34 +36,34 @@ if [ ${SHOW_GIT_STATUS:-0} -eq 1 ] && [ ! -z "$(which git 2> /dev/null)" ]; then
 			}
 		;;
 		*)
-			print_warn "Git status is not supported in ${BS_SHELL_NAME}"
-			get_git_status () {
+			print_warn "Git status is not supported in ${_BS_SHELL_NAME}"
+			__bs_get_git_status () {
 				echo -n
 			}
 	esac
 else
-	get_git_status () {
+	__bs_get_git_status () {
 		echo -n
 	}
 fi
 
-if [ ${SHOW_IDF_STATUS:-0} -eq 1 ]; then
-	get_idf_version () {
+if [ ${BS_SHOW_IDF_STATUS:-0} -eq 1 ]; then
+	__bs_get_idf_version () {
 		if [ ! -z "${ESP_IDF_VERSION}" ]; then
 			echo "ESP IDF: ${ESP_IDF_VERSION}"
 		fi
 	}
 else
-	get_idf_version () {
+	__bs_get_idf_version () {
 		echo -n
 	}
 fi
 
-get_devtools_str () {
+__bs_get_devtools_str () {
 	STATUS_STR=""
-	git_status="$(get_git_status)"
-	conda_env="$(get_conda_env)"
-	idf_version="$(get_idf_version)"
+	git_status="$(__bs_get_git_status)"
+	conda_env="$(__bs_get_conda_env)"
+	idf_version="$(__bs_get_idf_version)"
 	if [ -n "${git_status}" ]; then
 		STATUS_STR="${STATUS_STR}${git_status}"
 	fi

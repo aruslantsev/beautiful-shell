@@ -1,15 +1,15 @@
-if [ ${USE_COLORS:-0} -eq 1 ]; then
-    . ${BS_PATH_PREFIX}/scripts/colors
+if [ ${_BS_USE_COLORS:-0} -eq 1 ]; then
+    . ${_BS_PATH_PREFIX}/scripts/colors
 fi
 
-print_err () {
-	echo -e "${RED}[ERROR]${RESET} $1"
+__bs_print_err () {
+	echo -e "${_BS_RED}[ERROR]${_BS_RESET} $1"
 }
 
-print_warn () {
-	echo -e "${YELLOW}[WARNING]${RESET} $1"
+__bs_print_warn () {
+	echo -e "${_BS_YELLOW}[WARNING]${_BS_RESET} $1"
 }
 
-print_info () {
-	echo -e "${BLUE}[INFO]${RESET} $1"
+__bs_print_info () {
+	echo -e "${_BS_BLUE}[INFO]${_BS_RESET} $1"
 }

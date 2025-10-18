@@ -1,47 +1,54 @@
 if [ -n "$BASH_VERSION" ]; then
-	BS_SHELL_NAME="bash"
+	_BS_SHELL_NAME="bash"
 elif [ -n "$ZSH_VERSION" ]; then
-	BS_SHELL_NAME="zsh"
+	_BS_SHELL_NAME="zsh"
 else
-    BS_SHELL_NAME=$(echo ${0##*/} | sed 's/^-*//')  # ${SHELL##*/} is login shell
+    _BS_SHELL_NAME=$(echo ${0##*/} | sed 's/^-*//')  # ${SHELL##*/} is login shell
 fi
 
-case "$BS_SHELL_NAME" in
+case "${_BS_SHELL_NAME}" in
 	"bash" | "sh" | "ash" | "zsh")
 		;;
 	*)
-		echo "Unsupported shell ${BS_SHELL_NAME}"
-		BS_SHELL_NAME=""
+		echo "Unsupported shell ${_BS_SHELL_NAME}"
+		_BS_SHELL_NAME=""
 esac
 
-BS_PATH_PREFIX="${HOME}/.beautiful_shell"
+if [ -n "${_BS_SHELL_NAME}" ]; then  # Supported shell. Can't use exit here
+	# Change it only if you know what you are doing
+	_BS_PATH_PREFIX="${HOME}/.beautiful_shell"
+	. ${_BS_PATH_PREFIX}/scripts/config
 
-
-if [ ! -z "${BS_SHELL_NAME}" ]; then
-	. ${BS_PATH_PREFIX}/scripts/config
-
-	if [ ! -f "${BS_PATH_PREFIX}/config" ]; then
-		bs_default_config
-		bs_write_config
+	if [ ! -f "${_BS_PATH_PREFIX}/config" ] ; then
+		# Config file is missing. Write default
+		__bs_default_config
+		__bs_write_config
 	fi
-	. ${BS_PATH_PREFIX}/config
 
-	. ${BS_PATH_PREFIX}/scripts/messages
+	. ${_BS_PATH_PREFIX}/config
 
-	print_info "For Beautiful Shell information, run bs_info\n"
-	. ${BS_PATH_PREFIX}/scripts/info
+	# Update config. Some values can be initialized
+	if [ -n "${_BS_UPDATE_CONFIG}" ]; then
+		__bs_default_config # initializes only not initialized variables
+		__bs_write_config
+	fi
+
+	. ${_BS_PATH_PREFIX}/scripts/messages
+
+	__bs_print_info "For Beautiful Shell information, run bs_info\n"
+	. ${_BS_PATH_PREFIX}/scripts/info
 
 	if [ "$UID" = 0 ] || [ $(whoami) = "root" ]; then
-		IS_ROOT=1
-		print_warn "Runnung as root"
+		_BS_IS_ROOT=1
+		__bs_print_warn "Runnung as root"
 	else
-		IS_ROOT=0
+		_BS_IS_ROOT=0
 	fi
 
-	. ${BS_PATH_PREFIX}/scripts/00path
-	. ${BS_PATH_PREFIX}/scripts/01ps1
-	. ${BS_PATH_PREFIX}/scripts/02aliases
-	. ${BS_PATH_PREFIX}/scripts/03environment
-	. ${BS_PATH_PREFIX}/scripts/10ssh-agent
-	. ${BS_PATH_PREFIX}/scripts/20history
+	. ${_BS_PATH_PREFIX}/scripts/00_path
+	. ${_BS_PATH_PREFIX}/scripts/01_ps1
+	. ${_BS_PATH_PREFIX}/scripts/02_aliases
+	. ${_BS_PATH_PREFIX}/scripts/03_environment
+	. ${_BS_PATH_PREFIX}/scripts/10_ssh-agent
+	. ${_BS_PATH_PREFIX}/scripts/20_history
 fi

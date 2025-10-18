@@ -1,5 +1,5 @@
 if [ ${RUN_SSH_AGENT:-0} -eq 1 ]; then
-	if [ "$IS_ROOT" = 1 ]; then
+	if [ "${_BS_IS_ROOT}" = 1 ]; then
 		print_warn "Starting ssh-agent as root"
 	fi
 

@@ -1,0 +1,18 @@
+case "${_BS_SHELL_NAME}" in
+	"bash" | "ash" | "sh")
+		_BS_PROMPT_SOURCE="sh"
+		;;
+	"zsh")
+		_BS_PROMPT_SOURCE="zsh"
+		;;
+esac
+
+if [ ${_BS_USE_COLORS:-0} -eq 1 ]; then
+	. ${_BS_PATH_PREFIX}/scripts/${_BS_PROMPT_SOURCE}/ps1-colors
+fi
+
+if [ ${_BS_SIMPLE_PROMPT:-0} -eq 1 ]; then
+	. ${_BS_PATH_PREFIX}/scripts/${_BS_PROMPT_SOURCE}/simple
+else
+	. ${_BS_PATH_PREFIX}/scripts/${_BS_PROMPT_SOURCE}/multiline
+fi
