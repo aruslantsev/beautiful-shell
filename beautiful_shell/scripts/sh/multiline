@@ -14,7 +14,7 @@ case ${_BS_SHELL_NAME} in
 		EXITCODE="\$(exitcode=\$?; if [ \${exitcode} = 0 ]; then echo -n \"${OK_COLOR}\"; else echo -n \"${ERR_COLOR}\"; fi; echo -n \"[\${exitcode}|\$(__bs_get_exectime)]\"; echo \"${PS1_RESET}\")"
 		;;
 	"sh" | "ash")
-		print_warn "Execution time in multiline prompt is not supported in ${BS_SHELL_NAME}"
+		__bs_print_warn "Execution time in multiline prompt is not supported in ${_BS_SHELL_NAME}"
 		EXITCODE="\$(exitcode=\$?; if [ \${exitcode} = 0 ]; then echo -n \"${OK_COLOR}\"; else echo -n \"${ERR_COLOR}\"; fi; echo -n \"[\${exitcode}]\"; echo \"${PS1_RESET}\")"
 		;;
 esac

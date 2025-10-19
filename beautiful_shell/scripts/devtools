@@ -36,7 +36,7 @@ if [ ${_BS_SHOW_GIT_STATUS:-0} -eq 1 ] && [ ! -z "$(which git 2> /dev/null)" ]; 
 			}
 		;;
 		*)
-			print_warn "Git status is not supported in ${_BS_SHELL_NAME}"
+			__bs_print_warn "Git status is not supported in ${_BS_SHELL_NAME}"
 			__bs_get_git_status () {
 				echo -n
 			}
@@ -47,9 +47,9 @@ else
 	}
 fi
 
-if [ ${BS_SHOW_IDF_STATUS:-0} -eq 1 ]; then
+if [ ${_BS_SHOW_IDF_STATUS:-0} -eq 1 ]; then
 	__bs_get_idf_version () {
-		if [ ! -z "${ESP_IDF_VERSION}" ]; then
+		if [ -n "${ESP_IDF_VERSION}" ]; then
 			echo "ESP IDF: ${ESP_IDF_VERSION}"
 		fi
 	}
