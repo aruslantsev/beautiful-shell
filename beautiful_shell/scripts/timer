@@ -1,4 +1,4 @@
-convert_time () {
+__bs_convert_time () {
 	local t=$1
 
 	local d=$((t/60/60/24))
@@ -20,30 +20,30 @@ convert_time () {
 	echo "${timestr}"
 }
 
-timer_start () {
+__bs_timer_start () {
 	timer=${timer:-$SECONDS}
 }
 
-timer_stop () {
+__bs_timer_stop () {
 	timer_show=$(($SECONDS - ${timer:-$SECONDS}))
 	unset timer
 }
 
-get_exectime () {
-	convert_time timer_show
+__bs_get_exectime () {
+	__bs_convert_time timer_show
 }
 
-case ${SHELL_NAME} in
+case ${_BS_SHELL_NAME} in
 	"bash")
-		trap 'timer_start' DEBUG
-		PROMPT_COMMAND=timer_stop
+		trap '__bs_timer_start' DEBUG
+		PROMPT_COMMAND=__bs_timer_stop
 		;;
 	"zsh")
 		preexec() {
-			timer_start
+			__bs_timer_start
 		}
 		precmd () {
-			timer_stop
+			__bs_timer_stop
 		}
 		;;
 esac

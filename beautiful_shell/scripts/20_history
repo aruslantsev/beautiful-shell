@@ -1,5 +1,5 @@
-if [ ${SAVE_HISTORY:-1} -eq 0 ]; then
-	case ${BS_SHELL_NAME} in
+if [ ${_BS_SAVE_HISTORY:-1} -eq 0 ]; then
+	case ${_BS_SHELL_NAME} in
 		"bash" | "zsh")
 			unset HISTFILE
 			;;

@@ -1,6 +1,5 @@
 if [ -z "$OSTYPE" ]; then
-	os_name=$(uname)
-	case ${os_name} in
+	case $(uname) in
 		Linux)
 			OSTYPE="linux"
 			;;
@@ -13,7 +12,7 @@ if [ -z "$OSTYPE" ]; then
 		*)
 			OSTYPE="unknown"
 	esac
-	print_info "OSTYPE is not set. Guessed $OSTYPE"
+	__bs_print_info "OSTYPE is not set. Guessed $OSTYPE"
 fi
 
 case "$OSTYPE" in
@@ -21,10 +20,10 @@ case "$OSTYPE" in
 		# total_cpus=$(grep processor /proc/cpuinfo | wc -l)
 		total_mem_mb=$(free -m | awk 'NR==2{printf $2 }')
 
-		loadavg () {
+		__bs_loadavg () {
 			awk '{printf "LoadAvg: %s, %s, %s", $1, $2, $3}' /proc/loadavg
 		}
-		get_mem () {
+		__bs_get_mem () {
 			# mem=$(free -m | awk 'NR==2{printf "Mem: %.0f/%.0fGB (%.0f%%)\n", $3/1024,$2/1024,$3*100/$2 }')
 			# swap=$(free -m | awk 'NR==3{printf "Swp: %.0f/%.0fGB (%.0f%%)\n", $3/1024,$2/1024,$3*100/$2 }')
 			if [ ${total_mem_mb} -ge 8192 ]; then
@@ -36,15 +35,12 @@ case "$OSTYPE" in
 			fi
 			echo "${mem}, ${swap}"
 		}
-		get_system_load () {
-			echo "$(loadavg). $(get_mem)"
-		}
 		;;
 	darwin*)
-		loadavg  () {
+		__bs_loadavg  () {
 			sysctl -n vm.loadavg | awk '{printf "LoadAvg: %s, %s, %s", $2, $3, $4}'
 		}
-		get_mem () {
+		__bs_get_mem () {
 			total_mem=$(sysctl -n hw.memsize)
 			page_size=$(vm_stat | head -n 1 | grep --color=never -o -E "[0-9]+")
 			free_count=$(vm_stat | grep --color=never "Pages free" | grep --color=never -o -E "[0-9]+")
@@ -82,10 +78,10 @@ case "$OSTYPE" in
 		;;
 	*bsd*)
 		total_mem_mb=$(($(sysctl -n hw.physmem)/1024/1024))
-		loadavg  () {
+		__bs_loadavg  () {
 			sysctl -n vm.loadavg | awk '{printf "LoadAvg: %s, %s, %s", $2, $3, $4}'
 		}
-		get_mem () {
+		__bs_get_mem () {
 			free_mem_mb=$(($(sysctl -a | grep "Free Memory" | cut -d":" -f2 | xargs | sed 's/.$//')/1024))
 			used_mem=$((total_mem_mb - free_mem_mb))
 			if [ ${total_mem_mb} -ge 8192 ]; then
@@ -111,47 +107,57 @@ case "$OSTYPE" in
 		}
 		;;
 	*)
-		get_system_load () {
+		__bs_print_error "Unknown OSTYPE"
+		__bs_loadavg () {
+			echo -n
+		}
+		__bs_get_mem () {
 			echo -n
 		}
 esac
 
-case "$BS_SHELL_NAME" in
+__bs_get_system_load () {
+	echo "$(__bs_loadavg). $(__bs_get_mem)"
+}
+
+case "${_BS_SHELL_NAME}" in
 	"bash" | "ash" | "sh" )
-			get_jobs () {
-				JOBS=$(jobs | awk '{ print $2 }' | sort | uniq -c)
-				num_running=$(grep Running <<< $JOBS | awk '{print $1}')
-				num_stopped=$(grep Stopped <<< $JOBS | awk '{print $1}')
-				jobsstr=""
-				if [ -n "$num_running" ]; then
-					jobsstr="${jobsstr}R${num_running}"
-				fi
-				if [ -n "$num_stopped" ]; then
-					jobsstr="${jobsstr}S${num_stopped}"
-				fi
-				if [ -n "$jobsstr" ]; then
-					jobsstr="J:${jobsstr}"
-				fi
-				echo $jobsstr
-			}
+		__bs_get_jobs () {
+			JOBS=$(jobs | awk '{ print $2 }' | sort | uniq -c)
+			num_running=$(echo $JOBS | grep Running | awk '{print $1}')
+			num_stopped=$(echo $JOBS | grep Stopped | awk '{print $1}')
+			jobsstr=""
+			if [ -n "$num_running" ]; then
+				jobsstr="${jobsstr}R${num_running}"
+			fi
+			if [ -n "$num_stopped" ]; then
+				jobsstr="${jobsstr}S${num_stopped}"
+			fi
+			if [ -n "$jobsstr" ]; then
+				jobsstr="J:${jobsstr}"
+			fi
+			echo "$jobsstr"
+		}
 		;;
 	"zsh")
-		get_jobs () {
-				JOBS=$(jobs | awk '{ print $3 }' | sort | uniq -c)
-				num_running=$(grep running <<< $JOBS | awk '{print $1}')
-				num_stopped=$(grep suspended <<< $JOBS | awk '{print $1}')
-				jobsstr=""
-				if [ -n "$num_running" ]; then
-					jobsstr="${jobsstr}R${num_running}"
-				fi
-				if [ -n "$num_stopped" ]; then
-					jobsstr="${jobsstr}S${num_stopped}"
-				fi
-				if [ -n "$jobsstr" ]; then
-					jobsstr="J:${jobsstr}"
-				fi
-				echo $jobsstr
-			}
+		__bs_get_jobs () {
+			JOBS=$(jobs | awk '{ print $3 }' | sort | uniq -c)
+			num_running=$(echo $JOBS | grep running | awk '{print $1}')
+			num_stopped=$(echo $JOBS | grep suspended | awk '{print $1}')
+			jobsstr=""
+			if [ -n "$num_running" ]; then
+				jobsstr="${jobsstr}R${num_running}"
+			fi
+			if [ -n "$num_stopped" ]; then
+				jobsstr="${jobsstr}S${num_stopped}"
+			fi
+			if [ -n "$jobsstr" ]; then
+				jobsstr="J:${jobsstr}"
+			fi
+			echo "$jobsstr"
+		}
 		;;
+	*)
+		__bs_print_error "Unknown shell"
 esac
 

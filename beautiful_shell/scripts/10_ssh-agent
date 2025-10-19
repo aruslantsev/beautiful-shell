@@ -1,0 +1,32 @@
+if [ ${_BS_RUN_SSH_AGENT:-0} -eq 1 ]; then
+	if [ "${_BS_IS_ROOT}" = 1 ]; then
+		__bs_print_warn "Starting ssh-agent as root"
+	fi
+
+	if [ -d ~/.ssh ]; then
+		unset SSH_ASKPASS
+		if [ $(pgrep -u $USER ssh-agent | wc -l) -eq 0 ] && [ -S ~/.ssh/ssh-agent.sock ]; then
+			__bs_print_warn "No ssh-agent is running but socket exists. Removing it."
+			rm ~/.ssh/ssh-agent.sock
+		fi
+
+		if [ $(pgrep -u $USER ssh-agent | wc -l) -ne 0 ] && [ ! -S ~/.ssh/ssh-agent.sock ]; then
+			__bs_print_warn "Socket does not exist but ssh-agent is running. Maybe you want to stop ssh agents before running a new one?"
+		fi
+
+		if [ ! -S ~/.ssh/ssh-agent.sock ]; then
+			__bs_print_info "Starting ssh-agent"
+			ssh-agent -a ~/.ssh/ssh-agent.sock > /dev/null
+			if [ ! -f ~/.ssh/config ]; then
+				__bs_print_warn "~/.ssh/config does not exist, creating..."
+				touch ~/.ssh/config;
+			fi
+			grep "AddKeysToAgent[[:space:]]yes" ~/.ssh/config > /dev/null || __bs_print_info 'Insert "AddKeysToAgent yes" into your ~/.ssh/config'
+		fi
+
+		export SSH_AUTH_SOCK=~/.ssh/ssh-agent.sock
+		export SSH_AGENT_PID=$(pgrep -u $USER ssh-agent)
+	else
+		__bs_print_err "Directory ~/.ssh does not exist. ssh-agent failed to start"
+	fi
+fi
