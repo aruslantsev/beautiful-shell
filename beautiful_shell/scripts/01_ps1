@@ -1,5 +1,3 @@
-
-
 if [ ${_BS_SIMPLE_PROMPT:-0} -eq 1 ]; then
 	case "${_BS_SHELL_NAME}" in
 		"bash" | "ash" | "sh")
