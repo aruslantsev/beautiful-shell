@@ -4,13 +4,29 @@
 #include <memory>
 
 
-enum SHELL {POSIX, BASH, ZSH};
+enum shell {POSIX, BASH, ZSH};
+enum color_theme {DARK, LIGHT, CUSTOM};
+
+/* From config files */
+struct BPSettings {
+    double              time_threshold_sec  = 1.0;
+    bool                use_colors          = true;
+};
+
+/* From cmdline parameters */
+struct BPContext {
+    enum color_theme    color_theme         = DARK;
+    enum shell          shell               = BASH;
+    int                 exit_code           = 0;
+    double              exec_time_sec       = 0.0;
+};
 
 
 class BPModule {
 public:
     virtual ~BPModule() = default;
-    virtual std::string render() const = 0;  // TODO: why?
+    const int default_color = 0;
+    virtual std::string render(const BPContext &ctx, const BPSettings &cfg) const = 0;  // TODO: why?
 };
 
 
@@ -23,11 +39,11 @@ public:
         modules.push_back(std::move(module));
     }
 
-    std::string build_prompt() const {
+    std::string build_prompt(const BPContext &ctx, const BPSettings &cfg) const {
         std::string final_prompt;
         
         for (size_t i = 0; i < modules.size(); ++i) {
-            final_prompt += modules[i]->render();
+            final_prompt += modules[i]->render(ctx, cfg);
             
             if (i < modules.size() - 1) {
                 final_prompt += " ";

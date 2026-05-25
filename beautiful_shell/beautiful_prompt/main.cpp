@@ -1,8 +1,7 @@
 #include <iostream>
 #include "terminal.hpp"
 #include "beautiful_prompt.hpp"
-#include "cwd.hpp"
-#include "prompt_sym.hpp"
+#include "base.hpp"
 
 /*
 int main(int argc, char *argv[]) {
@@ -20,10 +19,14 @@ int main(int argc, char *argv[]) {
 int main(int argc, char* argv[]) {
     PromptEngine engine;
 
+    engine.add_module(std::make_unique<UserNameModule>());
     engine.add_module(std::make_unique<PathModule>());
     engine.add_module(std::make_unique<SymbolModule>());
 
-    std::cout << engine.build_prompt();
+    struct BPSettings cfg;
+    struct BPContext ctx;
+
+    std::cout << engine.build_prompt(ctx, cfg);
 
     return 0;
 }
