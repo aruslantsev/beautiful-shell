@@ -123,9 +123,9 @@ __bs_get_system_load () {
 case "${_BS_SHELL_NAME}" in
 	"bash" | "ash" | "sh" )
 		__bs_get_jobs () {
-			JOBS=$(jobs | awk '{ print $2 }' | sort | uniq -c)
-			num_running=$(echo $JOBS | grep Running | awk '{print $1}')
-			num_stopped=$(echo $JOBS | grep Stopped | awk '{print $1}')
+			JOBS="$(jobs | awk '{ print $2 }' | sort | uniq -c)"
+			num_running="$(echo $JOBS | grep Running | awk '{print $1}')"
+			num_stopped="$(echo $JOBS | grep Stopped | awk '{print $1}')"
 			jobsstr=""
 			if [ -n "$num_running" ]; then
 				jobsstr="${jobsstr}R${num_running}"
