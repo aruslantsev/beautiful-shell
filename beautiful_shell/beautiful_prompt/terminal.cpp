@@ -1,4 +1,4 @@
-#include "terminal.h"
+#include "terminal.hpp"
 
 
 int getTermParams(std::size_t &rows, std::size_t &cols) {
