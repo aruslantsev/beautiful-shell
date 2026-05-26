@@ -31,58 +31,6 @@ struct prompt_data {
 };
 
 
-int get_user_info(struct prompt_data *data) {
-    data->uid = geteuid();
-    data->is_root = (data->uid == 0);
-
-    struct passwd *pw = getpwuid(data->uid);
-    if (pw == NULL) {
-        data->username[0] = '\0';
-        return -1;
-    }
-    strncpy(data->username, pw->pw_name, FIELD_LENGTH);
-    data->username[FIELD_LENGTH - 1] = '\0';
-    return 0;
-}
-
-
-int get_hostname(struct prompt_data *data) {
-
-    if (gethostname(data->hostname, FIELD_LENGTH) != 0) {
-        data->hostname[0] = '\0';
-        return -1;
-    }
-    data->hostname[FIELD_LENGTH - 1] = '\0';
-    return 0;
-}
-
-
-int get_cwd(struct prompt_data *data) {
-    char *home = getenv("HOME");
-    char cwd[FIELD_LENGTH];
-    if (getcwd(cwd, FIELD_LENGTH) == NULL) {
-        snprintf(data->cwd, FIELD_LENGTH, ".");
-        return -1;
-    }
-    if (home != NULL) {
-        size_t home_len = strlen(home);
-        /* path starts with home */
-        if (home_len > 1 && strncmp(cwd, home, home_len) == 0) {
-            /* home and path have equal length */
-            if (cwd[home_len] == '\0') {
-                snprintf(data->cwd, FIELD_LENGTH, "~");
-                return 0;
-            /* path starts with home and next char is separator '/' */
-            } else if (cwd[home_len] == '/') {
-                snprintf(data->cwd, FIELD_LENGTH, "~%s", cwd + home_len);
-                return 0;
-            }
-        }
-    }
-    strncpy(data->cwd, cwd, FIELD_LENGTH);
-    data->cwd[FIELD_LENGTH - 1] = '\0';
-    return 0;
-}
 
 
 int get_localtime(struct prompt_data *data) {

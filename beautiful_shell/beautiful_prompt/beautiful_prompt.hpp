@@ -11,11 +11,11 @@ enum color_theme {DARK, LIGHT, CUSTOM};
 struct BPSettings {
     double              time_threshold_sec  = 1.0;
     bool                use_colors          = true;
+    enum color_theme    color_theme         = DARK;
 };
 
 /* From cmdline parameters */
 struct BPContext {
-    enum color_theme    color_theme         = DARK;
     enum shell          shell               = BASH;
     int                 exit_code           = 0;
     double              exec_time_sec       = 0.0;
@@ -25,7 +25,7 @@ struct BPContext {
 class BPModule {
 public:
     virtual ~BPModule() = default;
-    const int default_color = 0;
+    // const int default_color = 0;
     virtual std::string render(const BPContext &ctx, const BPSettings &cfg) const = 0;  // TODO: why?
 };
 

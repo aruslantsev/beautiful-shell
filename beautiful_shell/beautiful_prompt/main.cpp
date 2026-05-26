@@ -1,5 +1,5 @@
 #include <iostream>
-#include "terminal.hpp"
+// #include "terminal.hpp"
 #include "beautiful_prompt.hpp"
 #include "base.hpp"
 
@@ -16,15 +16,29 @@ int main(int argc, char *argv[]) {
 
 */
 
+BPContext parse_args(int argc, char* argv[]) {
+    BPContext ctx;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--shell" && i + 1 < argc) ctx.shell = BASH;  // argv[++i];
+        else if (arg == "--exit" && i + 1 < argc) ctx.exit_code = std::stoi(argv[++i]);
+        else if (arg == "--time" && i + 1 < argc) ctx.exec_time_sec = std::stod(argv[++i]);
+    }
+    return ctx;
+}
+
 int main(int argc, char* argv[]) {
+    struct BPSettings cfg;
+    struct BPContext ctx = parse_args(argc, argv);
+
     PromptEngine engine;
 
+    engine.add_module(std::make_unique<SpacerModule>());
+    engine.add_module(std::make_unique<CMDStatusModule>());
+    engine.add_module(std::make_unique<SpacerModule>());
     engine.add_module(std::make_unique<UserNameModule>());
     engine.add_module(std::make_unique<PathModule>());
     engine.add_module(std::make_unique<SymbolModule>());
-
-    struct BPSettings cfg;
-    struct BPContext ctx;
 
     std::cout << engine.build_prompt(ctx, cfg);
 
@@ -40,5 +54,11 @@ colors
 settings: colors, module settings. implement colorize(context, settings)
 default colors for each module
 implement ... init bash/zsh/posix/...
+
+--execution-time"
+--return-code") == 0) {
+--num-jobs
+--shlvl
+--pipe-status
 
 */

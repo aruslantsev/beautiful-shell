@@ -3,7 +3,8 @@
 #include <unistd.h>
 #include <filesystem>
 #include <pwd.h>
-#include <limits.h>
+// #include <limits.h>  HOST_NAME_MAX
+#include <sys/param.h>
 #include "beautiful_prompt.hpp"
 
 
@@ -14,16 +15,16 @@ public:
         uid_t uid = geteuid();
         struct passwd *pw = getpwuid(uid);
         if (pw == NULL) {
-            username = "";
+            username = "[unknown user]";
         } else {
             username = std::string(pw->pw_name);
         }
         if (getuid() == 0) {
             username = "";  // TODO: move to settings
         }
-        char hostname_chr[HOST_NAME_MAX];
-        if (gethostname(hostname_chr, HOST_NAME_MAX) != 0) {
-            hostname = "";
+        char hostname_chr[MAXHOSTNAMELEN + 1];
+        if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
+            hostname = "[unknown hostname]";
         } else {
             hostname = std::string(hostname_chr);
         }
@@ -74,3 +75,38 @@ public:
         return path_str;
     }
 };
+
+
+class SpacerModule : public BPModule {
+private:
+    static inline u_int8_t instances = 0;
+    u_int8_t current_instance;
+public:
+    SpacerModule() {
+        current_instance = instances;
+        ++instances;
+    }
+
+    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+        if (current_instance == 0) {
+            if (instances > 1) {
+                return "┌─ ";
+             } else {
+                return "";
+             }
+        } else if (current_instance == instances - 1) {
+            return "\n└─ ";
+        } else {
+            return "\n│  ";
+        }
+    }
+};
+
+
+/*
+# ┌─┬─┐
+# │ │ │
+# ├─┼─┤
+# │ │ │
+# └─┴─┘
+*/
