@@ -90,14 +90,14 @@ public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         if (current_instance == 0) {
             if (instances > 1) {
-                return "┌─ ";
+                return "┌─";
              } else {
                 return "";
              }
         } else if (current_instance == instances - 1) {
-            return "\n└─ ";
+            return "\n└─";
         } else {
-            return "\n│  ";
+            return "\n│ ";
         }
     }
 };

@@ -2,6 +2,8 @@
 // #include "terminal.hpp"
 #include "beautiful_prompt.hpp"
 #include "base.hpp"
+#include "cmd.hpp"
+#include "system.hpp"
 
 /*
 int main(int argc, char *argv[]) {
@@ -35,6 +37,9 @@ int main(int argc, char* argv[]) {
 
     engine.add_module(std::make_unique<SpacerModule>());
     engine.add_module(std::make_unique<CMDStatusModule>());
+    engine.add_module(std::make_unique<DateTimeModule>());
+    engine.add_module(std::make_unique<LoadAVGModule>());
+    engine.add_module(std::make_unique<RAMModule>());
     engine.add_module(std::make_unique<SpacerModule>());
     engine.add_module(std::make_unique<UserNameModule>());
     engine.add_module(std::make_unique<PathModule>());

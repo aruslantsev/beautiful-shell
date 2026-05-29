@@ -40,13 +40,15 @@ public:
     }
 
     std::string build_prompt(const BPContext &ctx, const BPSettings &cfg) const {
-        std::string final_prompt;
+        std::string final_prompt, module_output;
         
         for (size_t i = 0; i < modules.size(); ++i) {
-            final_prompt += modules[i]->render(ctx, cfg);
-            
-            if (i < modules.size() - 1) {
-                final_prompt += " ";
+            module_output = modules[i]->render(ctx, cfg);
+            if (module_output.size() > 0) {
+                final_prompt += module_output;
+                if (i < modules.size() - 1) {
+                    final_prompt += " ";
+                }
             }
         }
 
