@@ -41,8 +41,9 @@ struct BPSettings {
 
 /* From cmdline parameters */
 struct BPContext {
-    enum shell          shell               = shell::BASH;
+    enum shell          shell               = shell::POSIX;
     int                 exit_code           = 0;
+    std::vector<int>    pipe_status;
     double              exec_time_sec       = 0.0;
 };
 

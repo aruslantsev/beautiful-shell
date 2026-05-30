@@ -45,7 +45,6 @@ private:
     std::string color_dark  = BLUE;
     std::string color_light = YELLOW;
 public:
-    // const int default_color = 1;
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         std::string sym = "$";
         if (getuid() == 0) {

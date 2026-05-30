@@ -9,8 +9,26 @@ private:
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         std::string ret = "";
+        bool has_err = false;
         if (ctx.exit_code != 0) {
             ret += "[" + std::to_string(ctx.exit_code);
+            has_err = true;
+        }
+        if (!ctx.pipe_status.empty()) {
+            bool pipe_has_err = false;
+            std::string pipe_str = "";
+            for (size_t i = 0; i < ctx.pipe_status.size(); ++i) {
+                if (ctx.pipe_status[i] != 0) pipe_has_err = true;
+                pipe_str += std::to_string(ctx.pipe_status[i]);
+                if (i < ctx.pipe_status.size() - 1) {
+                    pipe_str += "|";
+                }
+            }
+            if (pipe_has_err) {
+                ret += ret.empty() ? "[" : "|";
+                ret += pipe_str;
+                has_err = true;
+            }
         }
         if (ctx.exec_time_sec >= cfg.time_threshold_sec) {
             ret += ret.empty() ? "[" : "|";
@@ -43,7 +61,7 @@ public:
         if (!ret.empty()) {
             ret += "]";
         }
-        std::string active_color = (ctx.exit_code != 0) ? color_err : color_ok;
+        std::string active_color = has_err ? color_err : color_ok;
         return Colorizer::paint(ret, active_color, ctx.shell, cfg.use_colors);
     }
 };
