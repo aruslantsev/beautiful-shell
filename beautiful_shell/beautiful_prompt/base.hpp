@@ -9,6 +9,10 @@
 
 
 class UserNameModule : public BPModule {
+private:
+    std::string color_dark  = GREEN;
+    std::string color_light = BLUE;
+    std::string color_root = RED;
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         std::string username, hostname;
@@ -28,24 +32,35 @@ public:
         } else {
             hostname = std::string(hostname_chr);
         }
-        return username + "@" + hostname;
+
+        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        if (getuid() == 0) active_color = RED;
+        return Colorizer::paint(username + "@" + hostname, active_color, ctx.shell, cfg.use_colors);
     }
 };
 
 
 class SymbolModule : public BPModule {
+private:
+    std::string color_dark  = BLUE;
+    std::string color_light = YELLOW;
 public:
     // const int default_color = 1;
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+        std::string sym = "$";
         if (getuid() == 0) {
             return "#";
         }
-        return "$";
+        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        return Colorizer::paint(sym, active_color, ctx.shell, cfg.use_colors);
     }
 };
 
 
 class PathModule : public BPModule {
+private:
+    std::string color_dark  = BLUE;
+    std::string color_light = YELLOW;
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         std::error_code ec;
@@ -72,7 +87,8 @@ public:
             }
         }
 
-        return path_str;
+        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        return Colorizer::paint(path_str, active_color, ctx.shell, cfg.use_colors);
     }
 };
 
@@ -81,6 +97,8 @@ class SpacerModule : public BPModule {
 private:
     static inline u_int8_t instances = 0;
     u_int8_t current_instance;
+    std::string color_dark  = WHITE;
+    std::string color_light = BLACK;
 public:
     SpacerModule() {
         current_instance = instances;
@@ -88,17 +106,20 @@ public:
     }
 
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+        std::string spacer = "";
         if (current_instance == 0) {
             if (instances > 1) {
-                return "┌─";
+                spacer = "┌─";
              } else {
-                return "";
+                spacer = "";
              }
         } else if (current_instance == instances - 1) {
-            return "\n└─";
+            spacer = "\n└─";
         } else {
-            return "\n│ ";
+            spacer = "\n│ ";
         }
+        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        return Colorizer::paint(spacer, active_color, ctx.shell, cfg.use_colors);
     }
 };
 

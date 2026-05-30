@@ -3,6 +3,9 @@
 
 
 class CMDStatusModule : public BPModule {
+private:
+    std::string color_err  = RED;
+    std::string color_ok = GREEN;
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         std::string ret = "";
@@ -10,11 +13,7 @@ public:
             ret += "[" + std::to_string(ctx.exit_code);
         }
         if (ctx.exec_time_sec >= cfg.time_threshold_sec) {
-            if (ret.size() == 0) {
-                ret += "[";
-            } else {
-                ret += "|";
-            }
+            ret += ret.empty() ? "[" : "|";
             std::string execution_time = "";
             char buffer[1024];
             if (ctx.exec_time_sec < 10) {
@@ -41,9 +40,10 @@ public:
                 ret += std::string(buffer);
             }
         }
-        if (ret.size() > 0) {
+        if (!ret.empty()) {
             ret += "]";
         }
-        return ret;
+        std::string active_color = (ctx.exit_code != 0) ? color_err : color_ok;
+        return Colorizer::paint(ret, active_color, ctx.shell, cfg.use_colors);
     }
 };

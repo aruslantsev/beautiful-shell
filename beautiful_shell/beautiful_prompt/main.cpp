@@ -4,6 +4,7 @@
 #include "base.hpp"
 #include "cmd.hpp"
 #include "system.hpp"
+#include "config.hpp"
 
 /*
 int main(int argc, char *argv[]) {
@@ -22,7 +23,7 @@ BPContext parse_args(int argc, char* argv[]) {
     BPContext ctx;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--shell" && i + 1 < argc) ctx.shell = BASH;  // argv[++i];
+        if (arg == "--shell" && i + 1 < argc) ctx.shell = shell::BASH;  // argv[++i];
         else if (arg == "--exit" && i + 1 < argc) ctx.exit_code = std::stoi(argv[++i]);
         else if (arg == "--time" && i + 1 < argc) ctx.exec_time_sec = std::stod(argv[++i]);
     }
@@ -30,7 +31,7 @@ BPContext parse_args(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    struct BPSettings cfg;
+    struct BPSettings cfg = load_settings();
     struct BPContext ctx = parse_args(argc, argv);
 
     PromptEngine engine;

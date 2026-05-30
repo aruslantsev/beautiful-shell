@@ -10,6 +10,9 @@
 
 
 class DateTimeModule : public BPModule {
+private:
+    std::string color_dark  = GREY;
+    std::string color_light = BLACK;
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         auto now = std::time(nullptr);
@@ -17,12 +20,16 @@ public:
         std::ostringstream oss;
         // Format: YYYY-MM-DD HH:MM:SS
         oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-        return oss.str();
+        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        return Colorizer::paint(oss.str(), active_color, ctx.shell, cfg.use_colors);
     }
 };
 
 
 class LoadAVGModule : public BPModule {
+private:
+    std::string color_dark  = GREY;
+    std::string color_light = BLACK;
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         double load[3];
@@ -32,7 +39,8 @@ public:
             out << std::fixed << std::setprecision(2) << load[0] << ", ";
             out << std::fixed << std::setprecision(2) << load[1] << ", ";
             out << std::fixed << std::setprecision(2) << load[2] << ".";
-            return out.str();
+            std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+            return Colorizer::paint(out.str(), active_color, ctx.shell, cfg.use_colors);
         }
         return "";
     }
@@ -40,6 +48,9 @@ public:
 
 
 class RAMModule : public BPModule {
+private:
+    std::string color_dark  = GREY;
+    std::string color_light = BLACK;
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         struct sysinfo si;
@@ -68,7 +79,8 @@ public:
             }
             out << "Mem: " << used_ram / divisor << "/" << total_ram / divisor << unit << ", ";
             out << "Swap: " << used_swap / divisor << "/" << total_swap / divisor << unit << ".";
-            return out.str();
+            std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+            return Colorizer::paint(out.str(), active_color, ctx.shell, cfg.use_colors);
         }
         return "";
     }
