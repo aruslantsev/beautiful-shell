@@ -1,6 +1,8 @@
 #pragma once
 
 #define RESET "0"
+#define THINBLACK "0;30"
+#define THINWHITE "0;37"
 #define BLACK "1;30"
 #define RED "1;31"
 #define GREEN "1;32"

@@ -96,8 +96,8 @@ class SpacerModule : public BPModule {
 private:
     static inline u_int8_t instances = 0;
     u_int8_t current_instance;
-    std::string color_dark  = WHITE;
-    std::string color_light = BLACK;
+    std::string color_dark  = THINWHITE;
+    std::string color_light = THINBLACK;
 public:
     SpacerModule() {
         current_instance = instances;
@@ -105,20 +105,19 @@ public:
     }
 
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
-        std::string spacer = "";
+        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
         if (current_instance == 0) {
             if (instances > 1) {
-                spacer = "┌─";
+                return Colorizer::paint("┌─", active_color, ctx.shell, cfg.use_colors);
              } else {
-                spacer = "";
+                return "";
              }
         } else if (current_instance == instances - 1) {
-            spacer = "\n└─";
+            return "\n" + Colorizer::paint("└─", active_color, ctx.shell, cfg.use_colors);
         } else {
-            spacer = "\n│ ";
+            return "\n" + Colorizer::paint("│ ", active_color, ctx.shell, cfg.use_colors);
         }
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
-        return Colorizer::paint(spacer, active_color, ctx.shell, cfg.use_colors);
+        return "";
     }
 };
 

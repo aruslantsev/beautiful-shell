@@ -1,9 +1,9 @@
 #include <iostream>
-// #include "terminal.hpp"
 #include "beautiful_prompt.hpp"
 #include "base.hpp"
 #include "cmd.hpp"
 #include "system.hpp"
+#include "status.hpp"
 #include "config.hpp"
 
 
@@ -21,7 +21,6 @@ BPContext parse_args(int argc, char* argv[]) {
                 ctx.shell = shell::POSIX;
             }
         }
-        else if (arg == "--exit" && i + 1 < argc) ctx.exit_code = std::stoi(argv[++i]);
         else if (arg == "--time" && i + 1 < argc) ctx.exec_time_sec = std::stod(argv[++i]);
         else if (arg == "--pipestatus" && i + 1 < argc) {
             std::string pipe_str = argv[++i];
@@ -32,10 +31,15 @@ BPContext parse_args(int argc, char* argv[]) {
                     ctx.pipe_status.push_back(std::stoi(code));
                 } catch (...) {}
             }
-            if (!ctx.pipe_status.empty()) {
-                ctx.exit_code = ctx.pipe_status.back();
+        }
+        else if (arg == "--jobs" && i + 1 < argc) {
+            try {
+                ctx.jobs_count = std::stoi(argv[++i]);
+            } catch (...) {
+                ctx.jobs_count = 0;
             }
         }
+        else if (arg == "--shlvl" && i + 1 < argc) ctx.shlvl = std::stoi(argv[++i]);
     }
     return ctx;
 }
@@ -56,7 +60,8 @@ int main(int argc, char* argv[]) {
                     << "    if [ -n \"$bp_start_time\" ]; then\n"
                     << "        exec_time=$(awk \"BEGIN {print $end_time - $bp_start_time}\" 2>/dev/null || echo 0);\n"
                     << "    fi;\n"
-                    << "    PS1=\"$(beautiful_prompt --shell bash --pipestatus \"${bp_pipe[*]}\" --time $exec_time)\";\n" // <-- Передаем строку
+                    << "    local env_jobs=$(jobs | wc -l);\n"
+                    << "    PS1=\"$(beautiful_prompt --shell bash --pipestatus \"${bp_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
                     << "    bp_start_time=\"\";\n"
                     << "};\n"
                     << "trap 'beautiful_prompt_start_time' DEBUG;\n"
@@ -73,7 +78,8 @@ int main(int argc, char* argv[]) {
                     << "    if [ -n \"$bp_start_time\" ]; then\n"
                     << "        exec_time=$(( EPOCHREALTIME - bp_start_time ))\n"
                     << "    fi;\n"
-                    << "    PROMPT=\"$(beautiful_prompt --shell zsh --pipestatus \"${bp_pipe[*]}\" --time $exec_time)\";\n"
+                    << "    local env_jobs=${#jobstates};\n"
+                    << "    PROMPT=\"$(beautiful_prompt --shell zsh --pipestatus \"${bp_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
                     << "    bp_start_time=\"\"\n"
                     << "}\n"
                     << "autoload -Uz add-zsh-hook\n"
@@ -82,7 +88,7 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         else {
-            std::cout << "PS1='$(beautiful_prompt --shell posix) '\n";
+            std::cout << "PS1='$(beautiful_prompt --shell posix --pipestatus \"$?\") '\n";
             return 0;
         }
     }
@@ -98,6 +104,7 @@ int main(int argc, char* argv[]) {
     engine.add_module(std::make_unique<LoadAVGModule>());
     engine.add_module(std::make_unique<RAMModule>());
     engine.add_module(std::make_unique<SpacerModule>());
+    engine.add_module(std::make_unique<EnvMonitorModule>());
     engine.add_module(std::make_unique<UserNameModule>());
     engine.add_module(std::make_unique<PathModule>());
     engine.add_module(std::make_unique<SymbolModule>());
@@ -109,8 +116,6 @@ int main(int argc, char* argv[]) {
 
 
 /*
-TODO: ctx: term size, term color
+TODO: ctx: term size
 cfg: colors, module settings
---num-jobs
---shlvl
 */
