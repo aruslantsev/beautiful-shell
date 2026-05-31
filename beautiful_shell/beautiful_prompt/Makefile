@@ -1,8 +1,20 @@
 TARGET = beautiful_prompt
 
-# Компилятор и флаги
-CXX = g++
-CXXFLAGS = -std=c++17 -O2 -march=x86-64-v2 -static -static-libstdc++ -static-libgcc -Wall -Wextra
+UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
+
+CXX = c++
+CXXFLAGS = -std=c++17 -O2 -Wall -Wextra
+
+ifeq ($(UNAME_M),x86_64)
+    CXXFLAGS += -march=x86-64-v2
+endif
+
+ifeq ($(UNAME_S),Linux)
+    CXXFLAGS += -static -static-libstdc++ -static-libgcc
+else ifeq ($(UNAME_S),FreeBSD)
+    CXXFLAGS += -static -static-libstdc++ -static-libgcc
+endif
 
 PREFIX = ~/.local
 BINDIR = $(PREFIX)/bin
