@@ -35,26 +35,35 @@ public:
 class PromptEngine {
 private:
     std::vector<std::unique_ptr<BPModule>> modules;
-
 public:
-    void add_module(std::unique_ptr<BPModule> module) {
-        modules.push_back(std::move(module));
+    PromptEngine() = default;
+    template<typename... Args>
+    PromptEngine(Args&&... args) {
+        (modules.push_back(std::forward<Args>(args)), ...);
     }
 
     std::string build_prompt(const BPContext &ctx, const BPSettings &cfg) const {
-        std::string final_prompt, module_output;
+        std::string final_prompt;
         
-        for (size_t i = 0; i < modules.size(); ++i) {
-            module_output = modules[i]->render(ctx, cfg);
-            if (module_output.size() > 0) {
-                final_prompt += module_output;
-                if (i < modules.size() - 1) {
-                    final_prompt += " ";
+
+        std::vector<std::string> active_outputs;
+        for (const auto& mod : modules) {
+            if (mod) {
+                std::string out = mod->render(ctx, cfg);
+                if (!out.empty()) {
+                    active_outputs.push_back(std::move(out));
                 }
             }
         }
 
-        final_prompt += " ";
+        for (size_t i = 0; i < active_outputs.size(); ++i) {
+            final_prompt += active_outputs[i];
+            if (i < active_outputs.size() - 1) {
+                final_prompt += " ";
+            }
+        }
+
+        if (!final_prompt.empty()) final_prompt += " ";
         
         return final_prompt;
     }

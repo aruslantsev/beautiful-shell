@@ -5,6 +5,9 @@
 #include <pwd.h>
 // #include <limits.h>  HOST_NAME_MAX
 #include <sys/param.h>
+#include <vector>
+#include <memory>
+#include <numeric>
 #include "beautiful_prompt.hpp"
 
 
@@ -92,32 +95,59 @@ public:
 };
 
 
+class DummyModule : public BPModule {
+public:
+    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+        return "";
+    }
+};
+
+
 class SpacerModule : public BPModule {
 private:
     static inline u_int8_t instances = 0;
     u_int8_t current_instance;
     std::string color_dark  = THINWHITE;
     std::string color_light = THINBLACK;
+    std::vector<std::unique_ptr<BPModule>> sub_modules;
 public:
-    SpacerModule() {
+    template<typename... Args>
+    SpacerModule(Args&&... args) {
         current_instance = instances;
         ++instances;
+        (sub_modules.push_back(std::forward<Args>(args)), ...);
     }
 
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+        std::string inner_content = "";
+        std::string module_output = "";
+        for (const auto& mod : sub_modules) {
+            if (mod) {
+                module_output = mod->render(ctx, cfg);
+                if (!module_output.empty()) {
+                    if (!inner_content.empty()) {
+                        inner_content += " ";
+                    }
+                    inner_content += module_output;
+                }
+            }
+        }
+
+        if (inner_content.empty()) return "";
+
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
         if (current_instance == 0) {
             if (instances > 1) {
-                return Colorizer::paint("┌─", active_color, ctx.shell, cfg.use_colors);
+                return Colorizer::paint("┌─", active_color, ctx.shell, cfg.use_colors) + " " + inner_content;
              } else {
-                return "";
+                return inner_content;
              }
         } else if (current_instance == instances - 1) {
-            return "\n" + Colorizer::paint("└─", active_color, ctx.shell, cfg.use_colors);
+            return "\n" + Colorizer::paint("└─", active_color, ctx.shell, cfg.use_colors) + " " + inner_content;
         } else {
-            return "\n" + Colorizer::paint("│ ", active_color, ctx.shell, cfg.use_colors);
+            return "\n" + Colorizer::paint("│ ", active_color, ctx.shell, cfg.use_colors) + " " + inner_content;
         }
-        return "";
+        return "";  /* Should never be reached */
     }
 };
 

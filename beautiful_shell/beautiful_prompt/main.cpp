@@ -96,19 +96,20 @@ int main(int argc, char* argv[]) {
     struct BPSettings cfg = load_settings();
     struct BPContext ctx = parse_args(argc, argv);
 
-    PromptEngine engine;
-
-    engine.add_module(std::make_unique<SpacerModule>());
-    engine.add_module(std::make_unique<CMDStatusModule>());
-    engine.add_module(std::make_unique<DateTimeModule>());
-    engine.add_module(std::make_unique<LoadAVGModule>());
-    engine.add_module(std::make_unique<RAMModule>());
-    engine.add_module(std::make_unique<SpacerModule>());
-    engine.add_module(std::make_unique<EnvMonitorModule>());
-    engine.add_module(std::make_unique<UserNameModule>());
-    engine.add_module(std::make_unique<PathModule>());
-    engine.add_module(std::make_unique<SymbolModule>());
-
+    PromptEngine engine{
+        std::make_unique<SpacerModule>(
+            std::make_unique<CMDStatusModule>(),
+            std::make_unique<DateTimeModule>(),
+            std::make_unique<LoadAVGModule>(),
+            std::make_unique<RAMModule>()
+        ),
+        std::make_unique<SpacerModule>(
+            std::make_unique<EnvMonitorModule>(),
+            std::make_unique<UserNameModule>(),
+            std::make_unique<PathModule>(),
+            std::make_unique<SymbolModule>()
+        )
+    };
     std::cout << engine.build_prompt(ctx, cfg);
 
     return 0;
