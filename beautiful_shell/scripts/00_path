@@ -1,3 +1,5 @@
+PATH=$PATH:~/.beautiful_shell/bin
+
 if [ -d ~/.local/bin ]; then
 	export PATH=$PATH:~/.local/bin
 fi

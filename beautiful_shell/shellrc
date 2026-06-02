@@ -35,18 +35,9 @@ if [ -n "${_BS_SHELL_NAME}" ]; then  # Supported shell. Can't use exit here
 
 	. ${_BS_PATH_PREFIX}/scripts/messages
 
-	__bs_print_info "For Beautiful Shell information, run bs_info\n"
 	. ${_BS_PATH_PREFIX}/scripts/info
 
-	if [ "$UID" = 0 ] || [ $(whoami) = "root" ]; then
-		_BS_IS_ROOT=1
-		__bs_print_warn "Runnung as root"
-	else
-		_BS_IS_ROOT=0
-	fi
-
 	. ${_BS_PATH_PREFIX}/scripts/00_path
-	. ${_BS_PATH_PREFIX}/scripts/01_ps1
 	. ${_BS_PATH_PREFIX}/scripts/02_aliases
 	. ${_BS_PATH_PREFIX}/scripts/03_environment
 	. ${_BS_PATH_PREFIX}/scripts/10_ssh-agent

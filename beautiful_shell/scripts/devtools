@@ -1,4 +1,4 @@
-if [ ${_BS_SHOW_CONDA_STATUS:-0} -eq 1 ] && [ -d ~/miniconda3 ]; then
+if [ -d ~/miniconda3 ]; then
 	eval "$(~/miniconda3/bin/conda shell.${_BS_SHELL_NAME} hook)"
 	conda deactivate
 
@@ -7,16 +7,6 @@ if [ ${_BS_SHOW_CONDA_STATUS:-0} -eq 1 ] && [ -d ~/miniconda3 ]; then
 		touch ~/.condarc
 	fi
 	grep -i "changeps1:[[:space:]]?*false" ~/.condarc > /dev/null || conda config --set changeps1 False
-
-	__bs_get_conda_env () {
-		if [ ! -z "${CONDA_DEFAULT_ENV}" ]; then
-			echo "Conda: ${CONDA_DEFAULT_ENV}"
-		fi
-	}
-else
-	__bs_get_conda_env () {
-		echo -n
-	}
 fi
 
 if [ ${_BS_SHOW_GIT_STATUS:-0} -eq 1 ] && [ ! -z "$(which git 2> /dev/null)" ]; then
@@ -46,40 +36,3 @@ else
 		echo -n
 	}
 fi
-
-if [ ${_BS_SHOW_IDF_STATUS:-0} -eq 1 ]; then
-	__bs_get_idf_version () {
-		if [ -n "${ESP_IDF_VERSION}" ]; then
-			echo "ESP IDF: ${ESP_IDF_VERSION}"
-		fi
-	}
-else
-	__bs_get_idf_version () {
-		echo -n
-	}
-fi
-
-__bs_get_devtools_str () {
-	STATUS_STR=""
-	git_status="$(__bs_get_git_status)"
-	conda_env="$(__bs_get_conda_env)"
-	idf_version="$(__bs_get_idf_version)"
-	if [ -n "${git_status}" ]; then
-		STATUS_STR="${STATUS_STR}${git_status}"
-	fi
-	if [ -n "${conda_env}" ]; then
-		if [ -n "${STATUS_STR}" ]; then
-			STATUS_STR="${STATUS_STR} | "
-		fi
-		STATUS_STR="${STATUS_STR}${conda_env}"
-	fi
-	if [ -n "${idf_version}" ]; then
-		if [ -n "${STATUS_STR}" ]; then
-			STATUS_STR="${STATUS_STR} | "
-		fi
-		STATUS_STR="${STATUS_STR}${idf_version}"
-	fi
-	if [ -n "${STATUS_STR}" ]; then
-		echo "${STATUS_STR}"
-	fi
-}

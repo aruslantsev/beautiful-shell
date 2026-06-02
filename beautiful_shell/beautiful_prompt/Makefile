@@ -16,7 +16,7 @@ else ifeq ($(UNAME_S),FreeBSD)
     CXXFLAGS += -static -static-libstdc++ -static-libgcc
 endif
 
-PREFIX = ~/.local
+PREFIX = ~/.beautiful_shell
 BINDIR = $(PREFIX)/bin
 
 SRCS = main.cpp

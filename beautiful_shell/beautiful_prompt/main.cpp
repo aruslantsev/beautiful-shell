@@ -5,6 +5,7 @@
 #include "system.hpp"
 #include "status.hpp"
 #include "config.hpp"
+#include "devtools.hpp"
 
 
 BPContext parse_args(int argc, char* argv[]) {
@@ -104,6 +105,10 @@ int main(int argc, char* argv[]) {
             std::make_unique<RAMModule>()
         ),
         std::make_unique<SpacerModule>(
+            std::make_unique<CondaModule>(),
+            std::make_unique<ESPIDFModule>()
+        ),
+        std::make_unique<SpacerModule>(
             std::make_unique<EnvMonitorModule>(),
             std::make_unique<UserNameModule>(),
             std::make_unique<PathModule>(),
@@ -117,6 +122,6 @@ int main(int argc, char* argv[]) {
 
 
 /*
-TODO: ctx: term size
+TODO: ctx: term size, runtime: set window title
 cfg: colors, module settings
 */
