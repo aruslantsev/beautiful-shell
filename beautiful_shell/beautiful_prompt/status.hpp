@@ -27,6 +27,18 @@ public:
             result += "&" + std::to_string(ctx.jobs_count);
         }
 
+        const char* tmux_env = std::getenv("TMUX");
+        if (tmux_env != nullptr && std::string(tmux_env).length() > 0) {
+            if (!result.empty()) result += "|";
+            result += "tmux";
+        } else {
+            const char* screen_env = std::getenv("STY");
+            if (screen_env != nullptr && std::string(screen_env).length() > 0) {
+                if (!result.empty()) result += "|";
+                result += "screen";
+            }
+        }
+
         if (!result.empty()) {
             result = "[" + result + "]";
             std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
