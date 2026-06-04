@@ -8,31 +8,3 @@ if [ -d ~/miniconda3 ]; then
 	fi
 	grep -i "changeps1:[[:space:]]?*false" ~/.condarc > /dev/null || conda config --set changeps1 False
 fi
-
-if [ ${_BS_SHOW_GIT_STATUS:-0} -eq 1 ] && [ ! -z "$(which git 2> /dev/null)" ]; then
-	case ${_BS_SHELL_NAME} in
-		"bash" | "zsh")
-			. ${_BS_PATH_PREFIX}/scripts/git_prompt.sh
-			export GIT_PS1_SHOWDIRTYSTATE=1
-			export GIT_PS1_SHOWSTASHSTATE=1
-			export GIT_PS1_SHOWUNTRACKEDFILES=1
-			export GIT_PS1_SHOWUPSTREAM=auto
-
-			__bs_get_git_status () {
-				git_status=$(__git_ps1)
-				if [ -n "${git_status}" ]; then
-					echo "Git: ${git_status}" | xargs
-				fi
-			}
-		;;
-		*)
-			__bs_print_warn "Git status is not supported in ${_BS_SHELL_NAME}"
-			__bs_get_git_status () {
-				echo -n
-			}
-	esac
-else
-	__bs_get_git_status () {
-		echo -n
-	}
-fi

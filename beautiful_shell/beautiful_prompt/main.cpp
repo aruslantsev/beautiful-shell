@@ -1,4 +1,10 @@
 #include <iostream>
+#include <unistd.h>
+#include <pwd.h>
+#include <sys/param.h>
+#include <filesystem>
+#include <string>
+#include <cstdlib>
 #include "beautiful_prompt.hpp"
 #include "base.hpp"
 #include "cmd.hpp"
@@ -6,6 +12,61 @@
 #include "status.hpp"
 #include "config.hpp"
 #include "devtools.hpp"
+#include "laptop.hpp"
+
+
+inline std::string set_window_title(shell s) {
+    std::string username = "", hostname = "";
+    uid_t uid = geteuid();
+    struct passwd *pw = getpwuid(uid);
+    if (pw == NULL) {
+        username = "[unknown user]";
+    } else {
+        username = std::string(pw->pw_name);
+    }
+    char hostname_chr[MAXHOSTNAMELEN + 1];
+    if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
+        hostname = "[unknown hostname]";
+    } else {
+        hostname = std::string(hostname_chr);
+    }
+
+    std::error_code ec;
+    std::filesystem::path current_path = std::filesystem::current_path(ec);
+        
+    if (ec) return "[unknown path]";
+
+    std::string path_str = current_path.string();
+    const char* home_dir = std::getenv("HOME");
+
+    if (home_dir != nullptr) {
+        std::string home_str(home_dir);
+        if (
+            path_str.find(home_str) == 0
+            && (
+                path_str.size() == home_str.size()
+                || (
+                    path_str.size() > home_str.size()
+                    && path_str.at(home_str.size()) == '/'
+                )
+            )
+        ) {
+            path_str.replace(0, home_str.length(), "~");
+        }
+    }
+
+    std::string title_text = username + "@" + hostname + ":" + path_str;
+    switch (s) {
+        case shell::BASH:
+            return "\001\033]0;" + title_text + "\007\002";
+        case shell::ZSH:
+            return "%{\033]0;" + title_text + "\007%}";
+
+        case shell::POSIX:
+        default:
+            return "\033]0;" + title_text + "\007";
+    }
+}
 
 
 BPContext parse_args(int argc, char* argv[]) {
@@ -102,9 +163,11 @@ int main(int argc, char* argv[]) {
             std::make_unique<CMDStatusModule>(),
             std::make_unique<DateTimeModule>(),
             std::make_unique<LoadAVGModule>(),
-            std::make_unique<RAMModule>()
+            std::make_unique<RAMModule>(),
+            std::make_unique<BatteryModule>()
         ),
         std::make_unique<SpacerModule>(
+            std::make_unique<GitModule>(),
             std::make_unique<CondaModule>(),
             std::make_unique<ESPIDFModule>()
         ),
@@ -115,13 +178,7 @@ int main(int argc, char* argv[]) {
             std::make_unique<SymbolModule>()
         )
     };
-    std::cout << engine.build_prompt(ctx, cfg);
+    std::cout << set_window_title(ctx.shell) << engine.build_prompt(ctx, cfg);
 
     return 0;
 }
-
-
-/*
-TODO: ctx: term size, runtime: set window title
-cfg: colors, module settings
-*/

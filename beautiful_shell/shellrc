@@ -11,33 +11,18 @@ case "${_BS_SHELL_NAME}" in
 		;;
 	*)
 		echo "Unsupported shell ${_BS_SHELL_NAME}"
-		_BS_SHELL_NAME=""
+		unset _BS_SHELL_NAME
 esac
 
 if [ -n "${_BS_SHELL_NAME}" ]; then  # Supported shell. Can't use exit here
 	# Change it only if you know what you are doing
 	_BS_PATH_PREFIX="${HOME}/.beautiful_shell"
-	. ${_BS_PATH_PREFIX}/scripts/config
-
-	if [ ! -f "${_BS_PATH_PREFIX}/config" ] ; then
-		# Config file is missing. Write default
-		__bs_default_config
-		__bs_write_config
-	fi
-
-	. ${_BS_PATH_PREFIX}/config
-
-	# Update config. Some values can be initialized
-	if [ -n "${_BS_UPDATE_CONFIG}" ]; then
-		__bs_default_config # initializes only not initialized variables
-		__bs_write_config
-	fi
+	PATH=$PATH:${_BS_PATH_PREFIX}/bin
 
 	. ${_BS_PATH_PREFIX}/scripts/messages
 
-	. ${_BS_PATH_PREFIX}/scripts/info
-
 	. ${_BS_PATH_PREFIX}/scripts/00_path
+	. ${_BS_PATH_PREFIX}/scripts/01_ps1
 	. ${_BS_PATH_PREFIX}/scripts/02_aliases
 	. ${_BS_PATH_PREFIX}/scripts/03_environment
 	. ${_BS_PATH_PREFIX}/scripts/10_ssh-agent
