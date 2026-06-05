@@ -1,6 +1,4 @@
-if [ ${_BS_USE_COLORS:-0} -eq 1 ]; then
-    . ${_BS_PATH_PREFIX}/scripts/colors
-fi
+. ${_BS_PATH_PREFIX}/scripts/colors
 
 __bs_print_err () {
 	echo -e "${_BS_RED}[ERROR]${_BS_RESET} $1"
