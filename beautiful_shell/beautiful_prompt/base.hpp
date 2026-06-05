@@ -105,8 +105,8 @@ public:
 
 class SpacerModule : public BPModule {
 private:
-    static inline u_int8_t instances = 0;
-    u_int8_t current_instance;
+    static inline uint8_t instances = 0;
+    uint8_t current_instance;
     std::string color_dark  = THINWHITE;
     std::string color_light = THINBLACK;
     std::vector<std::unique_ptr<BPModule>> sub_modules;
