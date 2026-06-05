@@ -1,0 +1,12 @@
+if [ "${_BS_CONDA_INIT:-0}" -eq 1 ]; then
+	if [ -d ~/miniconda3 ]; then
+		eval "$(~/miniconda3/bin/conda shell.${_BS_SHELL_NAME} hook)"
+		conda deactivate
+
+		if [ ! -f ~/.condarc ]; then
+			__bs_print_warn "~/.condarc is missing, creating it now"
+			touch ~/.condarc
+		fi
+		grep -i "changeps1:[[:space:]]?*false" ~/.condarc > /dev/null || conda config --set changeps1 False
+	fi
+fi

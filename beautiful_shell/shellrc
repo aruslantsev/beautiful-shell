@@ -1,3 +1,7 @@
+_BS_RUN_SSH_AGENT=1
+_BS_SAVE_HISTORY=0
+_BS_CONDA_INIT=1
+
 if [ -n "$BASH_VERSION" ]; then
 	_BS_SHELL_NAME="bash"
 elif [ -n "$ZSH_VERSION" ]; then
@@ -27,4 +31,5 @@ if [ -n "${_BS_SHELL_NAME}" ]; then  # Supported shell. Can't use exit here
 	. ${_BS_PATH_PREFIX}/scripts/03_environment
 	. ${_BS_PATH_PREFIX}/scripts/10_ssh-agent
 	. ${_BS_PATH_PREFIX}/scripts/20_history
+	. ${_BS_PATH_PREFIX}/scripts/30_devtools
 fi
