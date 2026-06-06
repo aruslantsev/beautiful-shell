@@ -1,71 +1,68 @@
 #include <iostream>
-#include <unistd.h>
-#include <pwd.h>
-#include <sys/param.h>
-#include <filesystem>
 #include <string>
 #include <cstdlib>
+#include <algorithm>
+#include <toml++/toml.hpp>
 #include "beautiful_prompt.hpp"
 #include "base.hpp"
 #include "cmd.hpp"
 #include "system.hpp"
 #include "status.hpp"
-#include "config.hpp"
 #include "devtools.hpp"
 #include "laptop.hpp"
 
 
-inline std::string set_window_title(shell s) {
-    std::string username = "", hostname = "";
-    uid_t uid = geteuid();
-    struct passwd *pw = getpwuid(uid);
-    if (pw == NULL) {
-        username = "[unknown user]";
-    } else {
-        username = std::string(pw->pw_name);
-    }
-    char hostname_chr[MAXHOSTNAMELEN + 1];
-    if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
-        hostname = "[unknown hostname]";
-    } else {
-        hostname = std::string(hostname_chr);
-    }
+inline BPSettings load_settings() {
+    BPSettings cfg;
 
-    std::error_code ec;
-    std::filesystem::path current_path = std::filesystem::current_path(ec);
-        
-    if (ec) return "[unknown path]";
-
-    std::string path_str = current_path.string();
     const char* home_dir = std::getenv("HOME");
+    if (!home_dir) return cfg;
 
-    if (home_dir != nullptr) {
-        std::string home_str(home_dir);
-        if (
-            path_str.find(home_str) == 0
-            && (
-                path_str.size() == home_str.size()
-                || (
-                    path_str.size() > home_str.size()
-                    && path_str.at(home_str.size()) == '/'
-                )
-            )
-        ) {
-            path_str.replace(0, home_str.length(), "~");
+    std::filesystem::path config_path = std::filesystem::path(home_dir) 
+                                        / ".config" 
+                                        / "beautiful_prompt" 
+                                        / "config";
+
+    if (!std::filesystem::exists(config_path)) {
+        return cfg;
+    }
+
+    try {
+        toml::table tbl = toml::parse_file(config_path.string());
+
+        if (auto prompt = tbl["prompt"].as_table()) {
+            
+            if (auto theme_node = (*prompt)["theme"].as_string()) {
+                std::string theme_val = std::string(theme_node->get());
+                if (theme_val == "light") cfg.color_theme = color_theme::LIGHT;
+                else if (theme_val == "dark") cfg.color_theme = color_theme::DARK;
+                else cfg.color_theme = color_theme::CUSTOM;
+            }
+
+            cfg.use_colors = (*prompt)["use_colors"].value_or(cfg.use_colors);
+            cfg.show_root_username = (*prompt)["show_root_username"].value_or(cfg.show_root_username);
+            if (auto node = (*prompt)["time_threshold"]) {
+                if (auto f = node.as_floating_point()) {
+                    cfg.time_threshold_sec = f->get();
+                } else if (auto i = node.as_integer()) {
+                    cfg.time_threshold_sec = static_cast<double>(i->get());
+                }
+            }
         }
-    }
 
-    std::string title_text = username + "@" + hostname + ":" + path_str;
-    switch (s) {
-        case shell::BASH:
-            return "\001\033]0;" + title_text + "\007\002";
-        case shell::ZSH:
-            return "%{\033]0;" + title_text + "\007%}";
+        if (auto shell = tbl["shell"].as_table()) {
+            cfg.run_ssh_agent = (*shell)["run_ssh_agent"].value_or(cfg.run_ssh_agent);
+            cfg.save_history  = (*shell)["save_history"].value_or(cfg.save_history);
+            cfg.conda_init    = (*shell)["conda_init"].value_or(cfg.conda_init);
+        }
 
-        case shell::POSIX:
-        default:
-            return "\033]0;" + title_text + "\007";
-    }
+        if (auto battery = tbl["battery"].as_table()) {
+            cfg.show_battery = (*battery)["show_battery"].value_or(cfg.show_battery);
+            cfg.battery_warn_percent = (*battery)["battery_warn_percent"].value_or(cfg.battery_warn_percent);
+            cfg.battery_hide_percent = (*battery)["battery_hide_percent"].value_or(cfg.battery_hide_percent);
+        }
+    } catch (const toml::parse_error& err) {}
+    return cfg;
 }
 
 
@@ -106,9 +103,16 @@ BPContext parse_args(int argc, char* argv[]) {
     return ctx;
 }
 
+
 int main(int argc, char* argv[]) {
+    struct BPSettings cfg = load_settings();
+    struct BPContext ctx = parse_args(argc, argv);
     if (argc >= 3 && std::string(argv[1]) == "init") {
         std::string target_shell = argv[2];
+
+        std::cout << "_BS_RUN_SSH_AGENT=" << (cfg.run_ssh_agent ? "1" : "0") << "\n";
+        std::cout << "_BS_SAVE_HISTORY=" << (cfg.save_history ? "1" : "0") << "\n";
+        std::cout << "_BS_CONDA_INIT=" << (cfg.conda_init ? "1" : "0") << "\n";
 
         if (target_shell == "bash") {
             std::cout << "bp_start_time=\"\";\n"
@@ -154,9 +158,6 @@ int main(int argc, char* argv[]) {
             return 0;
         }
     }
-
-    struct BPSettings cfg = load_settings();
-    struct BPContext ctx = parse_args(argc, argv);
 
     PromptEngine engine{
         std::make_unique<SpacerModule>(

@@ -29,6 +29,8 @@ public:
         bool is_discharging = false;
         bool has_battery = false;
 
+        if (!cfg.show_battery) return "";
+
 #if defined(__linux__)
         std::string bat_dir = "/sys/class/power_supply/BAT0";
         if (!std::filesystem::exists(bat_dir)) {
@@ -145,9 +147,9 @@ public:
         
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
         
-        if ((is_charging || is_not_charging) && percentage > 80) return "";
+        if ((is_charging || is_not_charging) && percentage > cfg.battery_hide_percent) return "";
         
-        if (percentage <= 15 && !is_charging && !is_not_charging) {
+        if (percentage <= cfg.battery_warn_percent && !is_charging && !is_not_charging) {
             active_color = RED;
         }
 

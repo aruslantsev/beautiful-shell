@@ -53,9 +53,7 @@ private:
                     return true;
                 }
             }
-        } catch (...) {
-            
-        }
+        } catch (...) {}
         return false;
     }
 public:

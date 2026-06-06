@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <filesystem>
 #include <pwd.h>
-// #include <limits.h>  HOST_NAME_MAX
 #include <sys/param.h>
 #include <vector>
 #include <memory>
@@ -26,18 +25,19 @@ public:
         } else {
             username = std::string(pw->pw_name);
         }
-        if (getuid() == 0) {
-            username = "";  // TODO: move to settings
+        if (uid == 0 && !cfg.show_root_username) {
+            username = "";
         }
         char hostname_chr[MAXHOSTNAMELEN + 1];
         if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
             hostname = "[unknown hostname]";
         } else {
+            hostname_chr[MAXHOSTNAMELEN] = '\0';
             hostname = std::string(hostname_chr);
         }
 
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
-        if (getuid() == 0) active_color = RED;
+        if (uid == 0) active_color = color_root;
         return Colorizer::paint(username + "@" + hostname, active_color, ctx.shell, cfg.use_colors);
     }
 };
@@ -50,8 +50,8 @@ private:
 public:
     std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
         std::string sym = "$";
-        if (getuid() == 0) {
-            return "#";
+        if (geteuid() == 0) {
+            sym = "#";
         }
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
         return Colorizer::paint(sym, active_color, ctx.shell, cfg.use_colors);
@@ -159,3 +159,56 @@ public:
 # │ │ │
 # └─┴─┘
 */
+
+inline std::string set_window_title(shell s) {
+    std::string username = "", hostname = "";
+    uid_t uid = geteuid();
+    struct passwd *pw = getpwuid(uid);
+    if (pw == NULL) {
+        username = "[unknown user]";
+    } else {
+        username = std::string(pw->pw_name);
+    }
+    char hostname_chr[MAXHOSTNAMELEN + 1];
+    if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
+        hostname = "[unknown hostname]";
+    } else {
+        hostname = std::string(hostname_chr);
+    }
+
+    std::error_code ec;
+    std::filesystem::path current_path = std::filesystem::current_path(ec);
+        
+    if (ec) return "[unknown path]";
+
+    std::string path_str = current_path.string();
+    const char* home_dir = std::getenv("HOME");
+
+    if (home_dir != nullptr) {
+        std::string home_str(home_dir);
+        if (
+            path_str.find(home_str) == 0
+            && (
+                path_str.size() == home_str.size()
+                || (
+                    path_str.size() > home_str.size()
+                    && path_str.at(home_str.size()) == '/'
+                )
+            )
+        ) {
+            path_str.replace(0, home_str.length(), "~");
+        }
+    }
+
+    std::string title_text = username + "@" + hostname + ":" + path_str;
+    switch (s) {
+        case shell::BASH:
+            return "\001\033]0;" + title_text + "\007\002";
+        case shell::ZSH:
+            return "%{\033]0;" + title_text + "\007%}";
+
+        case shell::POSIX:
+        default:
+            return "\033]0;" + title_text + "\007";
+    }
+}

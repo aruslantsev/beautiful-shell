@@ -10,9 +10,19 @@ enum class color_theme {DARK, LIGHT, CUSTOM};
 
 /* From config files */
 struct BPSettings {
-    double              time_threshold_sec  = 1.0;
-    bool                use_colors          = true;
-    enum color_theme    color_theme         = color_theme::DARK;
+    double              time_threshold_sec      = 1.0;
+    bool                use_colors              = true;
+    enum color_theme    color_theme             = color_theme::DARK;
+
+    bool                show_root_username      = false;
+
+    bool                run_ssh_agent           = true;
+    bool                save_history            = false;
+    bool                conda_init              = true;
+
+    bool                show_battery            = true;
+    int                 battery_warn_percent    = 20;
+    int                 battery_hide_percent    = 80;
 };
 
 /* From cmdline parameters */
