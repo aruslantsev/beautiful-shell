@@ -7,16 +7,16 @@
 #include <vector>
 #include <memory>
 #include <numeric>
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
 
-class UserNameModule : public BPModule {
+class UserNameModule : public BSModule {
 private:
     std::string color_dark  = GREEN;
     std::string color_light = BLUE;
     std::string color_root = RED;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::string username, hostname;
         uid_t uid = geteuid();
         struct passwd *pw = getpwuid(uid);
@@ -43,12 +43,12 @@ public:
 };
 
 
-class SymbolModule : public BPModule {
+class SymbolModule : public BSModule {
 private:
     std::string color_dark  = BLUE;
     std::string color_light = YELLOW;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::string sym = "$";
         if (geteuid() == 0) {
             sym = "#";
@@ -59,12 +59,12 @@ public:
 };
 
 
-class PathModule : public BPModule {
+class PathModule : public BSModule {
 private:
     std::string color_dark  = BLUE;
     std::string color_light = YELLOW;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::error_code ec;
         std::filesystem::path current_path = std::filesystem::current_path(ec);
         
@@ -95,21 +95,21 @@ public:
 };
 
 
-class DummyModule : public BPModule {
+class DummyModule : public BSModule {
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         return "";
     }
 };
 
 
-class SpacerModule : public BPModule {
+class SpacerModule : public BSModule {
 private:
     static inline uint8_t instances = 0;
     uint8_t current_instance;
     std::string color_dark  = THINWHITE;
     std::string color_light = THINBLACK;
-    std::vector<std::unique_ptr<BPModule>> sub_modules;
+    std::vector<std::unique_ptr<BSModule>> sub_modules;
 public:
     template<typename... Args>
     SpacerModule(Args&&... args) {
@@ -118,7 +118,7 @@ public:
         (sub_modules.push_back(std::forward<Args>(args)), ...);
     }
 
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::string inner_content = "";
         std::string module_output = "";
         for (const auto& mod : sub_modules) {

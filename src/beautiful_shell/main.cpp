@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <toml++/toml.hpp>
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 #include "base.hpp"
 #include "cmd.hpp"
 #include "system.hpp"
@@ -12,15 +12,15 @@
 #include "laptop.hpp"
 
 
-inline BPSettings load_settings() {
-    BPSettings cfg;
+inline BSSettings load_settings() {
+    BSSettings cfg;
 
     const char* home_dir = std::getenv("HOME");
     if (!home_dir) return cfg;
 
     std::filesystem::path config_path = std::filesystem::path(home_dir) 
                                         / ".config" 
-                                        / "beautiful_prompt" 
+                                        / "beautiful_shell" 
                                         / "config";
 
     if (!std::filesystem::exists(config_path)) {
@@ -66,8 +66,8 @@ inline BPSettings load_settings() {
 }
 
 
-BPContext parse_args(int argc, char* argv[]) {
-    BPContext ctx;
+BSContext parse_args(int argc, char* argv[]) {
+    BSContext ctx;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--shell" && i + 1 < argc) {
@@ -105,8 +105,8 @@ BPContext parse_args(int argc, char* argv[]) {
 
 
 int main(int argc, char* argv[]) {
-    struct BPSettings cfg = load_settings();
-    struct BPContext ctx = parse_args(argc, argv);
+    struct BSSettings cfg = load_settings();
+    struct BSContext ctx = parse_args(argc, argv);
     if (argc >= 3 && std::string(argv[1]) == "init") {
         std::string target_shell = argv[2];
 
@@ -115,46 +115,46 @@ int main(int argc, char* argv[]) {
         std::cout << "_BS_CONDA_INIT=" << (cfg.conda_init ? "1" : "0") << "\n";
 
         if (target_shell == "bash") {
-            std::cout << "bp_start_time=\"\";\n"
-                    << "beautiful_prompt_start_time() {\n"
-                    << "    [ -z \"$bp_start_time\" ] && bp_start_time=${EPOCHREALTIME:-$(date +%s.%N)};\n"
+            std::cout << "bs_start_time=\"\";\n"
+                    << "beautiful_shell_start_time() {\n"
+                    << "    [ -z \"$bs_start_time\" ] && bs_start_time=${EPOCHREALTIME:-$(date +%s.%N)};\n"
                     << "};\n"
-                    << "beautiful_prompt_set_ps1() {\n"
-                    << "    local bp_pipe=(\"${PIPESTATUS[@]}\");\n"
+                    << "beautiful_shell_set_ps1() {\n"
+                    << "    local bs_pipe=(\"${PIPESTATUS[@]}\");\n"
                     << "    local end_time=${EPOCHREALTIME:-$(date +%s.%N)};\n"
                     << "    local exec_time=0;\n"
-                    << "    if [ -n \"$bp_start_time\" ]; then\n"
-                    << "        exec_time=$(awk \"BEGIN {print $end_time - $bp_start_time}\" 2>/dev/null || echo 0);\n"
+                    << "    if [ -n \"$bs_start_time\" ]; then\n"
+                    << "        exec_time=$(awk \"BEGIN {print $end_time - $bs_start_time}\" 2>/dev/null || echo 0);\n"
                     << "    fi;\n"
                     << "    local env_jobs=$(jobs | wc -l);\n"
-                    << "    PS1=\"$(beautiful_prompt --shell bash --pipestatus \"${bp_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
-                    << "    bp_start_time=\"\";\n"
+                    << "    PS1=\"$(beautiful_shell --shell bash --pipestatus \"${bs_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
+                    << "    bs_start_time=\"\";\n"
                     << "};\n"
-                    << "trap 'beautiful_prompt_start_time' DEBUG;\n"
-                    << "PROMPT_COMMAND=beautiful_prompt_set_ps1;\n";
+                    << "trap 'beautiful_shell_start_time' DEBUG;\n"
+                    << "PROMPT_COMMAND=beautiful_shell_set_ps1;\n";
             return 0;
         } 
         else if (target_shell == "zsh") {
             std::cout << "zmodload zsh/datetime 2>/dev/null\n"
-                    << "bp_start_time=\"\";\n"
-                    << "beautiful_prompt_preexec() { bp_start_time=$EPOCHREALTIME }\n"
-                    << "beautiful_prompt_precmd() {\n"
-                    << "    local bp_pipe=(\"${pipestatus[@]}\");\n"
+                    << "bs_start_time=\"\";\n"
+                    << "beautiful_shell_preexec() { bs_start_time=$EPOCHREALTIME }\n"
+                    << "beautiful_shell_precmd() {\n"
+                    << "    local bs_pipe=(\"${pipestatus[@]}\");\n"
                     << "    local exec_time=0;\n"
-                    << "    if [ -n \"$bp_start_time\" ]; then\n"
-                    << "        exec_time=$(( EPOCHREALTIME - bp_start_time ))\n"
+                    << "    if [ -n \"$bs_start_time\" ]; then\n"
+                    << "        exec_time=$(( EPOCHREALTIME - bs_start_time ))\n"
                     << "    fi;\n"
                     << "    local env_jobs=${#jobstates};\n"
-                    << "    PROMPT=\"$(beautiful_prompt --shell zsh --pipestatus \"${bp_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
-                    << "    bp_start_time=\"\"\n"
+                    << "    PROMPT=\"$(beautiful_shell --shell zsh --pipestatus \"${bs_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
+                    << "    bs_start_time=\"\"\n"
                     << "}\n"
                     << "autoload -Uz add-zsh-hook\n"
-                    << "add-zsh-hook preexec beautiful_prompt_preexec\n"
-                    << "add-zsh-hook precmd beautiful_prompt_precmd\n";
+                    << "add-zsh-hook preexec beautiful_shell_preexec\n"
+                    << "add-zsh-hook precmd beautiful_shell_precmd\n";
             return 0;
         }
         else {
-            std::cout << "PS1='$(beautiful_prompt --shell posix --pipestatus \"$?\") '\n";
+            std::cout << "PS1='$(beautiful_shell --shell posix --pipestatus \"$?\") '\n";
             return 0;
         }
     }

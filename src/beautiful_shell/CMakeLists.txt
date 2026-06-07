@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(beautiful_prompt CXX C)
+project(beautiful_shell CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,14 +30,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tomlplusplus)
 
-add_executable(beautiful_prompt main.cpp)
+add_executable(beautiful_shell main.cpp)
 
-target_include_directories(beautiful_prompt PRIVATE 
+target_include_directories(beautiful_shell PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${libgit2_SOURCE_DIR}/include
 )
 
-target_link_libraries(beautiful_prompt PRIVATE 
+target_link_libraries(beautiful_shell PRIVATE 
     git2
     tomlplusplus::tomlplusplus
 )

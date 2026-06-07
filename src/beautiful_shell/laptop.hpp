@@ -14,15 +14,15 @@
 #include <sys/sysctl.h>
 #endif
 
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
-class BatteryModule : public BPModule {
+class BatteryModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = BLACK;
 
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         int percentage = -1;
         bool is_charging = false;
         bool is_not_charging = false;
@@ -133,7 +133,6 @@ public:
             return "";
         }
 
-        // Выбираем соответствующий суффикс состояния
         std::string state_sym = "";
         if (is_charging) {
             state_sym = "+";

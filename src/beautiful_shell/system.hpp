@@ -20,15 +20,15 @@
 #include <unistd.h>
 #include <cerrno>
 #endif
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
 
-class DateTimeModule : public BPModule {
+class DateTimeModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = BLACK;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         auto now = std::time(nullptr);
         auto tm = *std::localtime(&now);
         std::ostringstream oss;
@@ -39,12 +39,12 @@ public:
 };
 
 
-class LoadAVGModule : public BPModule {
+class LoadAVGModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = BLACK;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         double load[3];
         std::ostringstream out;
         out << "LoadAvg: ";
@@ -60,12 +60,12 @@ public:
 };
 
 
-class RAMModule : public BPModule {
+class RAMModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = BLACK;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         unsigned long long total_ram = 0;
         unsigned long long used_ram = 0;
         unsigned long long total_swap = 0;
