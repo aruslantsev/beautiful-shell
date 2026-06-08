@@ -1,0 +1,137 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # tags, e.g v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  # MACOS and LINUX
+  build-native-and-cross:
+    name: Build on ${{ matrix.os }} for ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            target: x86_64-linux-gnu
+          - os: linux
+            arch: arm64
+            runner: ubuntu-latest
+            target: aarch64-linux-gnu
+          - os: macos
+            arch: amd64
+            runner: macos-13 # x86_64
+            target: x86_64-apple-darwin
+          - os: macos
+            arch: arm64
+            runner: macos-14 # Apple Silicon M1/M2/M3
+            target: arm64-apple-darwin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Dependencies (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
+
+      - name: Build Project
+        run: |
+          mkdir build && cd build
+          if [ "${{ matrix.os }}" = "linux" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
+            # Cross-compile Linux ARM64
+            cmake -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                  -DCMAKE_BUILD_TYPE=Release ..
+          elif [ "${{ matrix.os }}" = "macos" ]; then
+            # Macos: target branch
+            cmake -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch == 'amd64' && 'x86_64' || 'arm64' }} \
+                  -DCMAKE_BUILD_TYPE=Release ..
+          else
+            # Native Linux amd64
+            cmake -DCMAKE_BUILD_TYPE=Release ..
+          fi
+          cmake --build . --config Release
+
+      - name: Rename Binary
+        run: |
+          mv build/beautiful_shell beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}
+          path: beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}
+
+  # FreeBSD in VM
+  build-freebsd:
+    name: Build on FreeBSD for ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build in FreeBSD VM
+        uses: cross-platform-actions/action@v0.24.0
+        with:
+          environment_variables: 'ARCH'
+          operating_system: freebsd
+          version: '14.0'
+          architecture: ${{ matrix.arch }}
+          run: |
+            # dependencies
+            sudo pkg update
+            sudo pkg install -y cmake bzip2 git
+            
+            # build
+            mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release ..
+            cmake --build .
+            cd ..
+            mv build/beautiful_shell beautiful_shell-freebsd-${{ matrix.arch }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-freebsd-${{ matrix.arch }}
+          path: beautiful_shell-freebsd-${{ matrix.arch }}
+
+  # Release
+  publish-release:
+    name: Create GitHub Release
+    needs: [build-native-and-cross, build-freebsd]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Display downloaded files
+        run: ls -R artifacts/
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/beautiful_shell-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
