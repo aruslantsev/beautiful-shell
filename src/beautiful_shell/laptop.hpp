@@ -14,20 +14,22 @@
 #include <sys/sysctl.h>
 #endif
 
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
-class BatteryModule : public BPModule {
+class BatteryModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = BLACK;
 
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         int percentage = -1;
         bool is_charging = false;
         bool is_not_charging = false;
         bool is_discharging = false;
         bool has_battery = false;
+
+        if (!cfg.show_battery) return "";
 
 #if defined(__linux__)
         std::string bat_dir = "/sys/class/power_supply/BAT0";
@@ -131,7 +133,6 @@ public:
             return "";
         }
 
-        // Выбираем соответствующий суффикс состояния
         std::string state_sym = "";
         if (is_charging) {
             state_sym = "+";
@@ -141,13 +142,13 @@ public:
             state_sym = "";
         }
 
-        std::string result = "Bat: " + std::to_string(percentage) + "%" + state_sym + ".";
+        std::string result = "Bat: " + std::to_string(percentage) + ((ctx.shell == shell::ZSH) ? "%%" : "%") + state_sym + ".";
         
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
         
-        if ((is_charging || is_not_charging) && percentage > 80) return "";
+        if ((is_charging || is_not_charging) && percentage > cfg.battery_hide_percent) return "";
         
-        if (percentage <= 15 && !is_charging && !is_not_charging) {
+        if (percentage <= cfg.battery_warn_percent && !is_charging && !is_not_charging) {
             active_color = RED;
         }
 

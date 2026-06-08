@@ -2,15 +2,15 @@
 #include <cstdlib>
 #include <filesystem>
 #include <git2.h>
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
 
-class CondaModule : public BPModule {
+class CondaModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = GREY;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::string result = "";
         const char* conda_env = std::getenv("CONDA_DEFAULT_ENV");
         if(conda_env != nullptr && std::string(conda_env).length() > 0) {
@@ -22,12 +22,12 @@ public:
 };
 
 
-class ESPIDFModule : public BPModule {
+class ESPIDFModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = GREY;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::string result = "";
         const char* esp_env = std::getenv("ESP_IDF_VERSION");
         if(esp_env != nullptr && std::string(esp_env).length() > 0) {
@@ -39,8 +39,7 @@ public:
 };
 
 
-
-class GitModule : public BPModule {
+class GitModule : public BSModule {
 private:
     std::string color_dark  = GREY;
     std::string color_light = GREY;
@@ -53,13 +52,11 @@ private:
                     return true;
                 }
             }
-        } catch (...) {
-            
-        }
+        } catch (...) {}
         return false;
     }
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         git_libgit2_init(); 
         
         git_repository *repo = nullptr;
@@ -139,11 +136,19 @@ public:
 
                 if (has_staged)    flags += "+";
                 if (has_unstaged)  flags += "*";
-                if (has_untracked) flags += "%";
+                if (has_untracked) flags += (ctx.shell == shell::ZSH) ? "%%" : "%";
             }
         }
         if (!flags.empty()) {
-            flags = " [" + flags + "]"; // Отделяем пробелом от имени ветки
+            flags = " [" + flags + "]";
+        }
+
+        if (ctx.shell == shell::ZSH) {
+            size_t pos = 0;
+            while ((pos = branch_name.find("%", pos)) != std::string::npos) {
+                branch_name.replace(pos, 1, "%%");
+                pos += 2;
+            }
         }
 
         std::string result = "Git: " + branch_name + flags + ".";

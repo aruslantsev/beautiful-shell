@@ -1,13 +1,13 @@
 #pragma once
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
 
-class CMDStatusModule : public BPModule {
+class CMDStatusModule : public BSModule {
 private:
     std::string color_err  = RED;
     std::string color_ok = GREEN;
 public:
-    std::string render(const BPContext &ctx, const BPSettings &cfg) const override {
+    std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
         std::string ret = "";
         bool pipe_has_err = false;
         if (!ctx.pipe_status.empty()) {

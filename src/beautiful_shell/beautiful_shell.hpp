@@ -9,14 +9,24 @@ enum class shell {POSIX, BASH, ZSH};
 enum class color_theme {DARK, LIGHT, CUSTOM};
 
 /* From config files */
-struct BPSettings {
-    double              time_threshold_sec  = 1.0;
-    bool                use_colors          = true;
-    enum color_theme    color_theme         = color_theme::DARK;
+struct BSSettings {
+    double              time_threshold_sec      = 1.0;
+    bool                use_colors              = true;
+    enum color_theme    color_theme             = color_theme::DARK;
+
+    bool                show_root_username      = false;
+
+    bool                run_ssh_agent           = true;
+    bool                save_history            = false;
+    bool                conda_init              = true;
+
+    bool                show_battery            = true;
+    int                 battery_warn_percent    = 20;
+    int                 battery_hide_percent    = 80;
 };
 
 /* From cmdline parameters */
-struct BPContext {
+struct BSContext {
     enum shell          shell               = shell::POSIX;
     std::vector<int>    pipe_status;
     double              exec_time_sec       = 0.0;
@@ -25,16 +35,16 @@ struct BPContext {
 };
 
 
-class BPModule {
+class BSModule {
 public:
-    virtual ~BPModule() = default;
-    virtual std::string render(const BPContext &ctx, const BPSettings &cfg) const = 0;
+    virtual ~BSModule() = default;
+    virtual std::string render(const BSContext &ctx, const BSSettings &cfg) const = 0;
 };
 
 
 class PromptEngine {
 private:
-    std::vector<std::unique_ptr<BPModule>> modules;
+    std::vector<std::unique_ptr<BSModule>> modules;
 public:
     PromptEngine() = default;
     template<typename... Args>
@@ -42,7 +52,7 @@ public:
         (modules.push_back(std::forward<Args>(args)), ...);
     }
 
-    std::string build_prompt(const BPContext &ctx, const BPSettings &cfg) const {
+    std::string build_prompt(const BSContext &ctx, const BSSettings &cfg) const {
         std::string final_prompt;
         
 

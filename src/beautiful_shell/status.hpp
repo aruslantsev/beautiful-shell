@@ -1,13 +1,13 @@
 #include <cstdlib>
-#include "beautiful_prompt.hpp"
+#include "beautiful_shell.hpp"
 
 
-class EnvMonitorModule : public BPModule {
+class EnvMonitorModule : public BSModule {
 private:
     std::string color_dark  = YELLOW;
     std::string color_light = YELLOW;
 public:
-    std::string render(const BPContext& ctx, const BPSettings& cfg) const override {
+    std::string render(const BSContext& ctx, const BSSettings& cfg) const override {
         std::string result = "";
 
         const char* ssh_env = std::getenv("SSH_CONNECTION");

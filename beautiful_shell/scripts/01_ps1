@@ -1,4 +1,0 @@
-eval "$(beautiful_prompt init ${_BS_SHELL_NAME})"
-# PS1_ROOT="\[\e]0;\u@\h:\w\a\]\[\e[01;31m\]\h\[\e[01;34m\] \w \$ \[\e[00m\]"
-# PS1_USER="\[\e]0;\u@\h:\w\a\]\[\e[01;32m\]\u@\h\[\e[01;34m\] \w\[\e[01;34m\] \$ \[\e[00m\]"
-# PS1_ZSH='%n@%m %1~ %# '
