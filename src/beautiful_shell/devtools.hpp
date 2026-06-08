@@ -39,7 +39,6 @@ public:
 };
 
 
-
 class GitModule : public BSModule {
 private:
     std::string color_dark  = GREY;
@@ -137,11 +136,19 @@ public:
 
                 if (has_staged)    flags += "+";
                 if (has_unstaged)  flags += "*";
-                if (has_untracked) flags += "%";
+                if (has_untracked) flags += (ctx.shell == shell::ZSH) ? "%%" : "%";
             }
         }
         if (!flags.empty()) {
-            flags = " [" + flags + "]"; // Отделяем пробелом от имени ветки
+            flags = " [" + flags + "]";
+        }
+
+        if (ctx.shell == shell::ZSH) {
+            size_t pos = 0;
+            while ((pos = branch_name.find("%", pos)) != std::string::npos) {
+                branch_name.replace(pos, 1, "%%");
+                pos += 2;
+            }
         }
 
         std::string result = "Git: " + branch_name + flags + ".";
