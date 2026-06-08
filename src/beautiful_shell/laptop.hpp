@@ -142,7 +142,7 @@ public:
             state_sym = "";
         }
 
-        std::string result = "Bat: " + std::to_string(percentage) + "%" + state_sym + ".";
+        std::string result = "Bat: " + std::to_string(percentage) + ((ctx.shell == shell::ZSH) ? "%%" : "%") + state_sym + ".";
         
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
         
