@@ -7,9 +7,16 @@ on:
 
 jobs:
   # 1. Сборка Linux (нативная + кросс-компиляция под ARM64)
-  build-linux-amd64:
-    name: Build (linux-amd64)
-    runs-on: ubuntu-latest
+  build-linux:
+    name: Build (linux-${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: aarch64
+            runner: ubuntu-22.04-arm64
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -31,47 +38,13 @@ jobs:
           cp build/beautiful_shell dist/.beautiful_shell/bin/
           cp src/shellrc dist/.beautiful_shell/
           cp src/scripts/* dist/.beautiful_shell/scripts/
-          cd dist && tar -czf ../beautiful_shell-linux-amd64.tar.gz .beautiful_shell
+          cd dist && tar -czf ../beautiful_shell-linux-${{ matrix.arch }}.tar.gz .beautiful_shell
 
-      - name: Upload Linux AMD64 Artifact
+      - name: Upload Linux ${{ matrix.arch }} Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: beautiful_shell-linux-amd64
-          path: beautiful_shell-linux-amd64.tar.gz
-
-
-  # 2. Кросс-компиляция Linux aarch64 (ARM64) — на ПУСТОЙ и изолированной машине
-  build-linux-aarch64:
-    name: Build (linux-aarch64)
-    runs-on: ubuntu-24.04-arm64
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Configure CMake
-        run: |
-          mkdir build && cd build
-          # Машина нативная ARM64, поэтому никаких флагов не нужно
-          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-
-      - name: Build Project
-        run: |
-          cd build && cmake --build . --config Release
-
-      - name: Pack Ecosystem Tarball
-        run: |
-          mkdir -p dist/.beautiful_shell/bin
-          mkdir -p dist/.beautiful_shell/scripts
-          cp build/beautiful_shell dist/.beautiful_shell/bin/
-          cp src/shellrc dist/.beautiful_shell/
-          cp src/scripts/* dist/.beautiful_shell/scripts/
-          cd dist && tar -czf ../beautiful_shell-linux-aarch64.tar.gz .beautiful_shell
-
-      - name: Upload Linux AArch64 Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: beautiful_shell-linux-aarch64
-          path: beautiful_shell-linux-aarch64.tar.gz
+          name: beautiful_shell-linux-${{ matrix.arch }}
+          path: beautiful_shell-linux-${{ matrix.arch }}.tar.gz
 
 
   # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без кросс-компиляции)
@@ -83,7 +56,7 @@ jobs:
         include:
           # Старый Intel Mac (соберет строго x86_64)
           - arch: amd64
-            runner: macos-15
+            runner: macos-15-intel
           # Новый Apple Silicon Mac (соберет строго arm64)
           - arch: aarch64
             runner: macos-15
@@ -156,7 +129,7 @@ jobs:
 
   # 4. Публикация в GitHub Releases
   publish-release:
-    needs: [build-linux-amd64, build-linux-aarch64, build-macos, build-freebsd]
+    needs: [build-linux, build-macos, build-freebsd]
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
