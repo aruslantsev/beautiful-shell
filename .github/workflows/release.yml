@@ -29,7 +29,7 @@ jobs:
       - name: Install Base Build Tools
         run: |
           apt-get update
-          apt-get install -y cmake gmake git build-essential
+          apt-get install -y cmake make git build-essential
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
