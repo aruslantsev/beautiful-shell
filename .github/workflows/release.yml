@@ -10,6 +10,13 @@ jobs:
   build-linux:
     name: Build (linux-${{ matrix.arch }})
     runs-on: ubuntu-latest
+    
+    # КРИТИЧЕСКИЙ ШАГ ДЛЯ ОЧИСТКИ КЭША:
+    # Запуск в изолированных контейнерах гарантирует, что amd64 и aarch64 сборки 
+    # не увидят скрытые маркеры конфигурации ExternalProject_Add друг друга.
+    container:
+      image: ubuntu:24.04
+
     strategy:
       matrix:
         include:
@@ -17,20 +24,23 @@ jobs:
             cmake_flags: ""
           - arch: aarch64
             cmake_flags: "-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
+            
     steps:
+      - name: Install Base Build Tools
+        run: |
+          apt-get update
+          apt-get install -y cmake gmake git build-essential
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
       - name: Install Cross-Compilers (Ubuntu AArch64)
         if: matrix.arch == 'aarch64'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
       - name: Configure CMake
         run: |
-          rm -rf _deps/
-
           mkdir build-${{ matrix.arch }}
           cd build-${{ matrix.arch }}
           cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ../src/beautiful_shell
