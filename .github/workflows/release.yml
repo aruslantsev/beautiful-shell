@@ -7,63 +7,80 @@ on:
 
 jobs:
   # 1. Сборка Linux (нативная + кросс-компиляция под ARM64)
-  build-linux:
-    name: Build (linux-${{ matrix.arch }})
+  build-linux-amd64:
+    name: Build (linux-amd64)
     runs-on: ubuntu-latest
-    
-    # КРИТИЧЕСКИЙ ШАГ ДЛЯ ОЧИСТКИ КЭША:
-    # Запуск в изолированных контейнерах гарантирует, что amd64 и aarch64 сборки 
-    # не увидят скрытые маркеры конфигурации ExternalProject_Add друг друга.
-    container:
-      image: ubuntu:24.04
-
-    strategy:
-      matrix:
-        include:
-          - arch: amd64
-            cmake_flags: ""
-          - arch: aarch64
-            cmake_flags: "-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
-            
     steps:
-      - name: Install Base Build Tools
-        run: |
-          apt-get update
-          apt-get install -y cmake make git build-essential
-
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Install Cross-Compilers (Ubuntu AArch64)
-        if: matrix.arch == 'aarch64'
-        run: |
-          apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
       - name: Configure CMake
         run: |
-          mkdir build-${{ matrix.arch }}
-          cd build-${{ matrix.arch }}
-          cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ../src/beautiful_shell
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
 
       - name: Build Project
         run: |
-          cd build-${{ matrix.arch }}
-          cmake --build . --config Release
+          cd build && cmake --build . --config Release
 
       - name: Pack Ecosystem Tarball
         run: |
           mkdir -p dist/.beautiful_shell/bin
           mkdir -p dist/.beautiful_shell/scripts
-          cp build-${{ matrix.arch }}/beautiful_shell dist/.beautiful_shell/bin/
+          cp build/beautiful_shell dist/.beautiful_shell/bin/
           cp src/shellrc dist/.beautiful_shell/
           cp src/scripts/* dist/.beautiful_shell/scripts/
-          cd dist && tar -czf ../beautiful_shell-linux-${{ matrix.arch }}.tar.gz .beautiful_shell
+          cd dist && tar -czf ../beautiful_shell-linux-amd64.tar.gz .beautiful_shell
 
-      - name: Upload Linux Artifact
+      - name: Upload Linux AMD64 Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: beautiful_shell-linux-${{ matrix.arch }}
-          path: beautiful_shell-linux-${{ matrix.arch }}.tar.gz
+          name: beautiful_shell-linux-amd64
+          path: beautiful_shell-linux-amd64.tar.gz
+
+
+  # 2. Кросс-компиляция Linux aarch64 (ARM64) — на ПУСТОЙ и изолированной машине
+  build-linux-aarch64:
+    name: Build (linux-aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Так как машина чистая, старого кэша нет. Просто ставим компилятор
+      - name: Install Cross-Compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            ../src/beautiful_shell
+
+      - name: Build Project
+        run: |
+          cd build && cmake --build . --config Release
+
+      - name: Pack Ecosystem Tarball
+        run: |
+          mkdir -p dist/.beautiful_shell/bin
+          mkdir -p dist/.beautiful_shell/scripts
+          cp build/beautiful_shell dist/.beautiful_shell/bin/
+          cp src/shellrc dist/.beautiful_shell/
+          cp src/scripts/* dist/.beautiful_shell/scripts/
+          cd dist && tar -czf ../beautiful_shell-linux-aarch64.tar.gz .beautiful_shell
+
+      - name: Upload Linux AArch64 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-linux-aarch64
+          path: beautiful_shell-linux-aarch64.tar.gz
 
 
   # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без кросс-компиляции)
@@ -148,7 +165,7 @@ jobs:
 
   # 4. Публикация в GitHub Releases
   publish-release:
-    needs: [build-linux, build-macos, build-freebsd]
+    needs: [build-linux-amd64, build-linux-aarch64, build-macos, build-freebsd]
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
