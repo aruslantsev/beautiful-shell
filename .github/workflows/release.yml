@@ -44,11 +44,18 @@ jobs:
   build-linux-aarch64:
     name: Build (linux-aarch64)
     runs-on: ubuntu-latest
+    
+    # КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Экспортируем компиляторы на уровне всей задачи.
+    # Это заставит и родительский CMake, и внутренний ExternalProject_Add 
+    # использовать исключительно компиляторы ARM64.
+    env:
+      CC: aarch64-linux-gnu-gcc
+      CXX: aarch64-linux-gnu-g++
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Так как машина чистая, старого кэша нет. Просто ставим компилятор
       - name: Install Cross-Compilers
         run: |
           sudo apt-get update
@@ -58,10 +65,9 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            ../src/beautiful_shell
+          # Больше не нужно передавать флаги компиляторов вручную через -D,
+          # CMake сам автоматически подтянет их из env переменных CC и CXX.
+          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
 
       - name: Build Project
         run: |
