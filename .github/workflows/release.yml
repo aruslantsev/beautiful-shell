@@ -1,0 +1,112 @@
+name: Build and Publish Ecosystem Releases
+
+on:
+  push:
+    tags:
+      - 'v*' # Запускать при пуше тегов версии, например v1.0.0
+
+jobs:
+  build-cross:
+    name: Build (${{ matrix.os }}-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Linux
+          - os: linux
+            arch: amd64
+            target_triple: x86_64-linux-gnu
+            cmake_flags: ""
+          - os: linux
+            arch: aarch64
+            target_triple: aarch64-linux-gnu
+            cmake_flags: "-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
+          
+          # FreeBSD (Используем встроенный в Ubuntu Clang с указанием целевого triple)
+          # Для полноценной сборки libgit2 на FreeBSD могут потребоваться системные хидеры freebsd-sysroot
+          - os: freebsd
+            arch: amd64
+            target_triple: x86_64-unknown-freebsd
+            cmake_flags: "-DCMAKE_SYSTEM_NAME=FreeBSD -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='--target=x86_64-unknown-freebsd' -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS='--target=x86_64-unknown-freebsd'"
+          - os: freebsd
+            arch: aarch64
+            target_triple: aarch64-unknown-freebsd
+            cmake_flags: "-DCMAKE_SYSTEM_NAME=FreeBSD -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='--target=aarch64-unknown-freebsd' -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS='--target=aarch64-unknown-freebsd'"
+
+          # macOS (Используем кросс-компилятор osxcross или собираем на macOS-раннерах)
+          # Примечание: для macOS проще и надежнее использовать родной раннер от GitHub, чтобы не настраивать osxcross
+          - os: darwin
+            arch: amd64
+            runner: macos-latest
+            cmake_flags: "-DCMAKE_OSX_ARCHITECTURES=x86_64"
+          - os: darwin
+            arch: aarch64
+            runner: macos-latest
+            cmake_flags: "-DCMAKE_OSX_ARCHITECTURES=arm64"
+
+    runs-on: ${{ matrix.runner || 'ubuntu-latest' }}
+    
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install Cross-Compilers (Ubuntu)
+        if: matrix.os == 'linux' && matrix.arch == 'aarch64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++ aarch64-linux-gnu
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          # Передаем специфичные флаги кросс-компиляции
+          cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ..
+
+      - name: Build Project
+        run: |
+          cd build
+          cmake --build . --config Release
+
+      - name: Pack Ecosystem Tarball
+        run: |
+          # Создаем структуру под дистрибутив, как в исходниках
+          mkdir -p dist/.beautiful_shell/bin
+          mkdir -p dist/.beautiful_shell/scripts
+          
+          # Копируем скомпилированный бинарник
+          cp build/beautiful_shell dist/.beautiful_shell/bin/
+          # Копируем скрипты и shellrc
+          cp src/shellrc dist/.beautiful_shell/
+          cp src/scripts/* dist/.beautiful_shell/scripts/
+          
+          # Архивируем в tar.gz
+          cd dist
+          tar -czf ../beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}.tar.gz .beautiful_shell
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}
+          path: beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+
+  publish-release:
+    needs: build-cross
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Flatten Artifacts Directory
+        run: |
+          mkdir -p release-assets
+          find all-artifacts -name "*.tar.gz" -exec cp {} release-assets/ \;
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
