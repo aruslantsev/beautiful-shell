@@ -3,37 +3,22 @@ name: Build and Publish Ecosystem Releases
 on:
   push:
     tags:
-      - 'v*' # Запускать при пуше тегов версии, например v1.0.0
+      - 'v*'
 
 jobs:
-  build-cross:
+  # 1. Задача для нативной сборки Linux и macOS
+  build-unix:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
-    # Оставляем это динамическое определение, так как для macOS нам нужен родной маковский раннер
     runs-on: ${{ matrix.runner || 'ubuntu-latest' }}
     strategy:
       matrix:
         include:
-          # Linux
           - os: linux
             arch: amd64
-            target_triple: x86_64-linux-gnu
             cmake_flags: ""
           - os: linux
             arch: aarch64
-            target_triple: aarch64-linux-gnu
             cmake_flags: "-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
-          
-          # FreeBSD (Ubuntu + Clang Target)
-          - os: freebsd
-            arch: amd64
-            target_triple: x86_64-unknown-freebsd
-            cmake_flags: "-DCMAKE_SYSTEM_NAME=FreeBSD -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='--target=x86_64-unknown-freebsd' -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS='--target=x86_64-unknown-freebsd'"
-          - os: freebsd
-            arch: aarch64
-            target_triple: aarch64-unknown-freebsd
-            cmake_flags: "-DCMAKE_SYSTEM_NAME=FreeBSD -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS='--target=aarch64-unknown-freebsd' -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS='--target=aarch64-unknown-freebsd'"
-
-          # macOS (Используем Mac-раннеры от GitHub для нативной сборки)
           - os: darwin
             arch: amd64
             runner: macos-latest
@@ -42,13 +27,11 @@ jobs:
             arch: aarch64
             runner: macos-latest
             cmake_flags: "-DCMAKE_OSX_ARCHITECTURES=arm64"
-
-    # <-- ЗДЕСЬ СЛЕДУЕТ СРАЗУ ПЕРЕЙТИ К STEPS, УДАЛИВ ДУБЛИРУЮЩИЙСЯ 'runs-on: ubuntu-latest'
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Install Cross-Compilers (Ubuntu)
+      - name: Install Cross-Compilers (Ubuntu AArch64)
         if: matrix.os == 'linux' && matrix.arch == 'aarch64'
         run: |
           sudo apt-get update
@@ -56,39 +39,73 @@ jobs:
 
       - name: Configure CMake
         run: |
-          mkdir build
-          cd build
-          # Указываем относительный путь до папки, где лежит CMakeLists.txt (../src/beautiful_shell)
+          mkdir build && cd build
           cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ../src/beautiful_shell
 
       - name: Build Project
         run: |
-          cd build
-          cmake --build . --config Release
+          cd build && cmake --build . --config Release
 
       - name: Pack Ecosystem Tarball
         run: |
-          # Создаем структуру под дистрибутив
           mkdir -p dist/.beautiful_shell/bin
           mkdir -p dist/.beautiful_shell/scripts
-          
-          # Копируем скомпилированный бинарник из папки build
           cp build/beautiful_shell dist/.beautiful_shell/bin/
-          # Находясь в корне репозитория, копируем скрипты и shellrc из src/
           cp src/shellrc dist/.beautiful_shell/
           cp src/scripts/* dist/.beautiful_shell/scripts/
-          
-          # Упаковываем в архив
-          cd dist
-          tar -czf ../beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}.tar.gz .beautiful_shell
+          cd dist && tar -czf ../beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}.tar.gz .beautiful_shell
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}
           path: beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
 
+  # 2. Новая изолированная задача специально для FreeBSD (amd64 и aarch64)
+  build-freebsd:
+    name: Build (freebsd-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, aarch64]
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Используем специальный Github Action, который запускает виртуальную машину FreeBSD внутри Ubuntu хоста
+      - name: Build natively inside FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          # Указываем архитектуру виртуалки (для aarch64 под капотом включится QEMU эмуляция)
+          architecture: ${{ matrix.arch }}
+          # Пре-устанавливаем необходимые пакеты во FreeBSD
+          prepare: |
+            pkg install -y cmake git llvm
+          # Запускаем сборку внутри FreeBSD среды
+          run: |
+            mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+            cmake --build . --config Release
+            cd ..
+            
+            # Упаковываем артефакты
+            mkdir -p dist/.beautiful_shell/bin
+            mkdir -p dist/.beautiful_shell/scripts
+            cp build/beautiful_shell dist/.beautiful_shell/bin/
+            cp src/shellrc dist/.beautiful_shell/
+            cp src/scripts/* dist/.beautiful_shell/scripts/
+            cd dist && tar -czf ../beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz .beautiful_shell
+
+      - name: Upload FreeBSD Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-freebsd-${{ matrix.arch }}
+          path: dist/beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz
+
+  # 3. Публикация всех собранных архивов в GitHub Releases
   publish-release:
-    needs: build-cross
+    needs: [build-unix, build-freebsd]
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
