@@ -58,7 +58,8 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ..
+          # Указываем относительный путь до папки, где лежит CMakeLists.txt (../src/beautiful_shell)
+          cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ../src/beautiful_shell
 
       - name: Build Project
         run: |
@@ -67,14 +68,19 @@ jobs:
 
       - name: Pack Ecosystem Tarball
         run: |
+          # Создаем структуру под дистрибутив
           mkdir -p dist/.beautiful_shell/bin
           mkdir -p dist/.beautiful_shell/scripts
+          
+          # Копируем скомпилированный бинарник из папки build
           cp build/beautiful_shell dist/.beautiful_shell/bin/
+          # Находясь в корне репозитория, копируем скрипты и shellrc из src/
           cp src/shellrc dist/.beautiful_shell/
           cp src/scripts/* dist/.beautiful_shell/scripts/
+          
+          # Упаковываем в архив
           cd dist
           tar -czf ../beautiful_shell-${{ matrix.os }}-${{ matrix.arch }}.tar.gz .beautiful_shell
-
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
