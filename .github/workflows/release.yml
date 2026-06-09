@@ -16,7 +16,6 @@ jobs:
           - arch: amd64
             cmake_flags: ""
           - arch: aarch64
-            # При кросс-компиляции обязательно передаем CMake, какой компилятор использовать
             cmake_flags: "-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
     steps:
       - name: Checkout Source Code
@@ -30,7 +29,8 @@ jobs:
 
       - name: Configure CMake
         run: |
-          # Создаем уникальную папку под конкретную архитектуру
+          rm -rf _deps/
+
           mkdir build-${{ matrix.arch }}
           cd build-${{ matrix.arch }}
           cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }} ../src/beautiful_shell
@@ -44,7 +44,6 @@ jobs:
         run: |
           mkdir -p dist/.beautiful_shell/bin
           mkdir -p dist/.beautiful_shell/scripts
-          # Копируем скомпилированный бинарник из уникальной папки
           cp build-${{ matrix.arch }}/beautiful_shell dist/.beautiful_shell/bin/
           cp src/shellrc dist/.beautiful_shell/
           cp src/scripts/* dist/.beautiful_shell/scripts/
