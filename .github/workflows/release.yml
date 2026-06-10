@@ -1,0 +1,185 @@
+name: Build and Publish Ecosystem Releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-linux:
+    name: Build (linux-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, aarch64]
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Для ARM64 ставим кросс-компиляторы
+      - name: Install Cross-Compilers
+        if: matrix.arch == 'aarch64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+# КРИТИЧЕСКИЙ ШАГ: Перехватываем управление CMake для aarch64
+      - name: Setup CMake Wrapper for Cross-Compilation
+        if: matrix.arch == 'aarch64'
+        run: |
+          mkdir -p bin
+          # Находим реальный путь к системному cmake (например, /usr/local/bin/cmake)
+          REAL_CMAKE=$(which cmake)
+          echo "Found real cmake at: $REAL_CMAKE"
+          
+          # Создаем обертку, подставляя динамически найденный путь $REAL_CMAKE
+          cat << EOF > bin/cmake
+          #!/bin/bash
+          # Проверяем, если cmake вызывают для конфигурации (есть .. или ../ в аргументах)
+          if [[ "\$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "\$*" == *"../"* ]]; then
+            $REAL_CMAKE \\
+              -DCMAKE_SYSTEM_NAME=Linux \\
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \\
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \\
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \\
+              "\$@"
+          else
+            # Во всех остальных случаях (например, --build) вызываем как обычно
+            $REAL_CMAKE "\$@"
+          fi
+          EOF
+          
+          chmod +x bin/cmake
+          # Выдвигаем наш кастомный cmake на первое место в системе
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      - name: Configure and Build
+        run: |
+          mkdir build && cd build
+          
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then
+            # Наш кастомный cmake-wrapper подхватит этот вызов и добавит нужные флаги
+            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          else
+            # Обычный системный cmake для x86_64
+            /usr/bin/cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          fi
+          
+          cmake --build .
+
+      - name: Pack Ecosystem Tarball
+        run: |
+          mkdir -p dist/.beautiful_shell/bin
+          mkdir -p dist/.beautiful_shell/scripts
+          cp build/beautiful_shell dist/.beautiful_shell/bin/
+          cp src/shellrc dist/.beautiful_shell/
+          cp src/scripts/* dist/.beautiful_shell/scripts/
+          cd dist && tar -czf ../beautiful_shell-linux-${{ matrix.arch }}.tar.gz .beautiful_shell
+
+      - name: Upload Linux ${{ matrix.arch }} Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-linux-${{ matrix.arch }}
+          path: beautiful_shell-linux-${{ matrix.arch }}.tar.gz
+
+
+  # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без очередей на быстрых серверах Apple)
+  build-macos:
+    name: Build (darwin-${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          # Старый Intel Mac (соберет строго x86_64)
+          - arch: amd64
+            runner: macos-15-intel
+          # Новый Apple Silicon Mac (соберет строго arm64)
+          - arch: aarch64
+            runner: macos-15
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+
+      - name: Build Project
+        run: |
+          cd build && cmake --build . --config Release
+
+      - name: Pack Ecosystem Tarball
+        run: |
+          mkdir -p dist/.beautiful_shell/bin
+          mkdir -p dist/.beautiful_shell/scripts
+          cp build/beautiful_shell dist/.beautiful_shell/bin/
+          cp src/shellrc dist/.beautiful_shell/
+          cp src/scripts/* dist/.beautiful_shell/scripts/
+          cd dist && tar -czf ../beautiful_shell-darwin-${{ matrix.arch }}.tar.gz .beautiful_shell
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-darwin-${{ matrix.arch }}
+          path: beautiful_shell-darwin-${{ matrix.arch }}.tar.gz
+
+
+  # 3. Сборка внутри эмулятора FreeBSD (С исправленным ключом arch)
+  build-freebsd:
+    name: Build (freebsd-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, aarch64]
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Build natively inside FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          arch: ${{ matrix.arch }}
+          prepare: |
+            pkg install -y cmake git llvm
+          run: |
+            mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+            cmake --build . --config Release
+            cd ..
+            mkdir -p dist/.beautiful_shell/bin
+            mkdir -p dist/.beautiful_shell/scripts
+            cp build/beautiful_shell dist/.beautiful_shell/bin/
+            cp src/shellrc dist/.beautiful_shell/
+            cp src/scripts/* dist/.beautiful_shell/scripts/
+            cd dist && tar -czf ../beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz .beautiful_shell
+
+      - name: Upload FreeBSD Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beautiful_shell-freebsd-${{ matrix.arch }}
+          path: dist/beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz
+
+
+  # 4. Публикация в GitHub Releases
+  publish-release:
+    needs: [build-linux, build-macos, build-freebsd]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Flatten Artifacts Directory
+        run: |
+          mkdir -p release-assets
+          find all-artifacts -name "*.tar.gz" -exec cp {} release-assets/ \;
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
