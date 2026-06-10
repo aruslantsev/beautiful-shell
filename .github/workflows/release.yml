@@ -26,32 +26,29 @@ jobs:
       - name: Setup CMake Wrapper
         run: |
           mkdir -p bin
-          # Находим реальный cmake в системе
           REAL_CMAKE=$(which cmake)
           echo "System cmake found at: $REAL_CMAKE"
           
-          # Записываем скрипт-обертку (символ 临 удален, всё чисто)
           cat << 'EOF' > bin/cmake
           #!/bin/bash
-          # Если это сборка под aarch64 И это этап конфигурации (есть флаги или переходы по папкам)
-          if [ "$MATRIX_ARCH" = "aarch64" ] && { [[ "$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "$*" == *"../"* ]]; }; then
-            exec /usr/bin/env cmake-original \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-              "$@"
-          else
-            # Во всех остальных случаях (для amd64 или при --build) вызываем оригинальный cmake
-            exec /usr/bin/env cmake-original "$@"
+          # For aarch64 cross-compilation, ALWAYS inject the cross-compile toolchain
+          if [ "$MATRIX_ARCH" = "aarch64" ]; then
+            # Only add cross-compile flags if they're not already present
+            if [[ "$*" != *"-DCMAKE_SYSTEM_NAME"* ]]; then
+              exec /usr/bin/env cmake-original \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                "$@"
+            fi
           fi
+          # For amd64 or if cross-compile flags already present
+          exec /usr/bin/env cmake-original "$@"
           EOF
           
-          # Создаем жесткую ссылку на оригинальный cmake
           ln -s "$REAL_CMAKE" bin/cmake-original
           chmod +x bin/cmake
-          
-          # Выдвигаем нашу обертку в начало PATH
           echo "$(pwd)/bin" >> $GITHUB_PATH
 
       # Сборка с принудительной чисткой кэша
