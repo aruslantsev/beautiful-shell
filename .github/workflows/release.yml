@@ -23,28 +23,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-      # КРИТИЧЕСКИЙ ШАГ: Перехватываем управление CMake для aarch64
+# КРИТИЧЕСКИЙ ШАГ: Перехватываем управление CMake для aarch64
       - name: Setup CMake Wrapper for Cross-Compilation
         if: matrix.arch == 'aarch64'
         run: |
           mkdir -p bin
-          # Создаем обертку для cmake. Когда ExternalProject_Add вызовет `cmake`,
-          # этот скрипт автоматически подмешает флаги компилятора ARM64 в любой внутренний проект!
-          cat << 'EOF' > bin/cmake
+          # Находим реальный путь к системному cmake (например, /usr/local/bin/cmake)
+          REAL_CMAKE=$(which cmake)
+          echo "Found real cmake at: $REAL_CMAKE"
+          
+          # Создаем обертку, подставляя динамически найденный путь $REAL_CMAKE
+          cat << EOF > bin/cmake
           #!/bin/bash
           # Проверяем, если cmake вызывают для конфигурации (есть .. или ../ в аргументах)
-          if [[ "$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "$*" == *"../"* ]]; then
-            /usr/bin/cmake \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-              "$@"
+          if [[ "\$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "\$*" == *"../"* ]]; then
+            $REAL_CMAKE \\
+              -DCMAKE_SYSTEM_NAME=Linux \\
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \\
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \\
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \\
+              "\$@"
           else
             # Во всех остальных случаях (например, --build) вызываем как обычно
-            /usr/bin/cmake "$@"
+            $REAL_CMAKE "\$@"
           fi
           EOF
+          
           chmod +x bin/cmake
           # Выдвигаем наш кастомный cmake на первое место в системе
           echo "$(pwd)/bin" >> $GITHUB_PATH
