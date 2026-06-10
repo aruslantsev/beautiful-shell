@@ -23,53 +23,35 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-      - name: Setup CMake Wrapper
+      - name: Setup Cross-Compile Toolchain
+        if: matrix.arch == 'aarch64'
         run: |
-          mkdir -p bin
-          REAL_CMAKE=$(which cmake)
-          echo "System cmake found at: $REAL_CMAKE"
-          
-          cat << 'EOF' > bin/cmake
-          #!/bin/bash
-          # Pass through build commands unchanged
-          if [[ "$1" == "--build" ]]; then
-            exec /usr/bin/env cmake-original "$@"
-          fi
-
-          # For aarch64 cross-compilation, ALWAYS inject the cross-compile toolchain
-          if [ "$MATRIX_ARCH" = "aarch64" ]; then
-            # Only add cross-compile flags if they're not already present
-            if [[ "$*" != *"-DCMAKE_SYSTEM_NAME"* ]]; then
-              exec /usr/bin/env cmake-original \
-                -DCMAKE_SYSTEM_NAME=Linux \
-                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-                "$@"
-            fi
-          fi
-          # For amd64 or if cross-compile flags already present
-          exec /usr/bin/env cmake-original "$@"
+          cat << 'EOF' > /tmp/aarch64-toolchain.cmake
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR aarch64)
+          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
           EOF
-          
-          ln -s "$REAL_CMAKE" bin/cmake-original
-          chmod +x bin/cmake
-          echo "$(pwd)/bin" >> $GITHUB_PATH
 
-      # Сборка с принудительной чисткой кэша
       - name: Configure and Build
         env:
           MATRIX_ARCH: ${{ matrix.arch }}
         run: |
-          # Жёстко удаляем старую папку build, если она вдруг застряла в кэше воркера
           rm -rf build
           mkdir build && cd build
           
-          # Конфигурируем с нуля. Теперь обертка ОБЯЗАТЕЛЬНО перехватит libgit2
-          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          if [ "$MATRIX_ARCH" = "aarch64" ]; then
+            cmake -DCMAKE_TOOLCHAIN_FILE=/tmp/aarch64-toolchain.cmake \
+                  -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          else
+            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          fi
           
           cmake --build .
-
       - name: Pack Ecosystem Tarball
         run: |
           mkdir -p dist/.beautiful_shell/bin
