@@ -6,9 +6,9 @@ on:
       - 'v*'
 
 jobs:
-  build-linux:
+build-linux:
     name: Build (linux-${{ matrix.arch }})
-    runs-on: ubuntu-latest # Всегда стартует мгновенно
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: [amd64, aarch64]
@@ -16,34 +16,52 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Для ARM64 ставим кросс-компиляторы на Intel-хост
+      # Для ARM64 ставим кросс-компиляторы
       - name: Install Cross-Compilers
         if: matrix.arch == 'aarch64'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
+      # КРИТИЧЕСКИЙ ШАГ: Перехватываем управление CMake для aarch64
+      - name: Setup CMake Wrapper for Cross-Compilation
+        if: matrix.arch == 'aarch64'
+        run: |
+          mkdir -p bin
+          # Создаем обертку для cmake. Когда ExternalProject_Add вызовет `cmake`,
+          # этот скрипт автоматически подмешает флаги компилятора ARM64 в любой внутренний проект!
+          cat << 'EOF' > bin/cmake
+          #!/bin/bash
+          # Проверяем, если cmake вызывают для конфигурации (есть .. или ../ в аргументах)
+          if [[ "$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "$*" == *"../"* ]]; then
+            /usr/bin/cmake \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+              "$@"
+          else
+            # Во всех остальных случаях (например, --build) вызываем как обычно
+            /usr/bin/cmake "$@"
+          fi
+          EOF
+          chmod +x bin/cmake
+          # Выдвигаем наш кастомный cmake на первое место в системе
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
       - name: Configure and Build
         run: |
           mkdir build && cd build
           
           if [ "${{ matrix.arch }}" = "aarch64" ]; then
-            # КРИТИЧЕСКИЙ ХАК ДЛЯ EXTERNALPROJECT_ADD:
-            # Мы передаем флаги компилятора и архитектуры. Благодаря тому, что мы явно 
-            # указываем SYSTEM_NAME и SYSTEM_PROCESSOR, родительский CMake заставит 
-            # модуль ExternalProject_Add (libgit2) использовать эти же настройки!
-            cmake -DCMAKE_BUILD_TYPE=Release \
-                  -DCMAKE_SYSTEM_NAME=Linux \
-                  -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-                  -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-                  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-                  ../src/beautiful_shell
-          else
-            # Стандартная сборка под Intel
+            # Наш кастомный cmake-wrapper подхватит этот вызов и добавит нужные флаги
             cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          else
+            # Обычный системный cmake для x86_64
+            /usr/bin/cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
           fi
           
-          cmake --build . --config Release
+          cmake --build .
 
       - name: Pack Ecosystem Tarball
         run: |
