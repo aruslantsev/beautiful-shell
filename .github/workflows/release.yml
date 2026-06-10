@@ -8,7 +8,7 @@ on:
 jobs:
   build-linux:
     name: Build (linux-${{ matrix.arch }})
-    runs-on: ubuntu-latest # Этот раннер всегда выдается GitHub мгновенно, без очередей
+    runs-on: ubuntu-latest # Всегда стартует мгновенно
     strategy:
       matrix:
         arch: [amd64, aarch64]
@@ -16,30 +16,35 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Шаг для Intel: собираем быстро и нативно на хосте
-      - name: Build Native AMD64
-        if: matrix.arch == 'amd64'
+      # Для ARM64 ставим кросс-компиляторы на Intel-хост
+      - name: Install Cross-Compilers
+        if: matrix.arch == 'aarch64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Configure and Build
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then
+            # КРИТИЧЕСКИЙ ХАК ДЛЯ EXTERNALPROJECT_ADD:
+            # Мы передаем флаги компилятора и архитектуры. Благодаря тому, что мы явно 
+            # указываем SYSTEM_NAME и SYSTEM_PROCESSOR, родительский CMake заставит 
+            # модуль ExternalProject_Add (libgit2) использовать эти же настройки!
+            cmake -DCMAKE_BUILD_TYPE=Release \
+                  -DCMAKE_SYSTEM_NAME=Linux \
+                  -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                  -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                  ../src/beautiful_shell
+          else
+            # Стандартная сборка под Intel
+            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          fi
+          
           cmake --build . --config Release
 
-      # Шаг для ARM64: собираем в стерильном QEMU-контейнере
-      - name: Build Native AArch64 via QEMU
-        if: matrix.arch == 'aarch64'
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: aarch64
-          distro: ubuntu22.04
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          run: |
-            apt-get update
-            apt-get install -y cmake make git build-essential
-            mkdir build && cd build
-            cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS="-O0" -DCMAKE_CXX_FLAGS="-O0"  ../src/beautiful_shell
-            cmake --build . --config MinSizeRel
-
-      # Упаковка (работает одинаково, так как контейнер QEMU мапит файлы обратно на хост)
       - name: Pack Ecosystem Tarball
         run: |
           mkdir -p dist/.beautiful_shell/bin
