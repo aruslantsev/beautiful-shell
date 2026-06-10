@@ -8,50 +8,25 @@ on:
 jobs:
   build-linux:
     name: Build (linux-${{ matrix.arch }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        arch: [amd64, aarch64]
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-latest-arm64  # Native ARM64 runner, no cross-compile needed
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Для ARM64 ставим кросс-компиляторы
-      - name: Install Cross-Compilers
-        if: matrix.arch == 'aarch64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-      - name: Setup Cross-Compile Toolchain
-        if: matrix.arch == 'aarch64'
-        run: |
-          cat << 'EOF' > /tmp/aarch64-toolchain.cmake
-          set(CMAKE_SYSTEM_NAME Linux)
-          set(CMAKE_SYSTEM_PROCESSOR aarch64)
-          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
-          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
-          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
-          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-          EOF
-
       - name: Configure and Build
-        env:
-          MATRIX_ARCH: ${{ matrix.arch }}
         run: |
           rm -rf build
           mkdir build && cd build
-          
-          if [ "$MATRIX_ARCH" = "aarch64" ]; then
-            cmake -DCMAKE_TOOLCHAIN_FILE=/tmp/aarch64-toolchain.cmake \
-                  -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-          else
-            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-          fi
-          
-          cmake --build .
+          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          cmake --build . --config Release
+
       - name: Pack Ecosystem Tarball
         run: |
           mkdir -p dist/.beautiful_shell/bin
