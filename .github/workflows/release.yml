@@ -6,7 +6,6 @@ on:
       - 'v*'
 
 jobs:
-  # 1. Сборка Linux (Мгновенный старт: amd64 нативно, aarch64 через эмуляцию QEMU)
   build-linux:
     name: Build (linux-${{ matrix.arch }})
     runs-on: ubuntu-latest # Этот раннер всегда выдается GitHub мгновенно, без очередей
@@ -17,10 +16,20 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Build Linux via QEMU (${{ matrix.arch }})
+      # Шаг для Intel: собираем быстро и нативно на хосте
+      - name: Build Native AMD64
+        if: matrix.arch == 'amd64'
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          cmake --build . --config Release
+
+      # Шаг для ARM64: собираем в стерильном QEMU-контейнере
+      - name: Build Native AArch64 via QEMU
+        if: matrix.arch == 'aarch64'
         uses: uraimo/run-on-arch-action@v2
         with:
-          arch: ${{ matrix.arch }}
+          arch: aarch64
           distro: ubuntu22.04
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           run: |
@@ -28,8 +37,9 @@ jobs:
             apt-get install -y cmake make git build-essential
             mkdir build && cd build
             cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-             cmake --build . --config Release
+            cmake --build . --config Release
 
+      # Упаковка (работает одинаково, так как контейнер QEMU мапит файлы обратно на хост)
       - name: Pack Ecosystem Tarball
         run: |
           mkdir -p dist/.beautiful_shell/bin
