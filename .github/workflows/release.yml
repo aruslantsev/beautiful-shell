@@ -14,9 +14,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
           - arch: aarch64
-            runner: ubuntu-22.04-arm64
+            runner: ubuntu-24.04-arm64
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
