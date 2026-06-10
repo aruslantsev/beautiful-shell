@@ -36,8 +36,8 @@ jobs:
             apt-get update
             apt-get install -y cmake make git build-essential
             mkdir build && cd build
-            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-            cmake --build . --config Release
+            cmake -DCMAKE_BUILD_TYPE=MinSizeRel ../src/beautiful_shell
+            cmake --build . --config MinSizeRel
 
       # Упаковка (работает одинаково, так как контейнер QEMU мапит файлы обратно на хост)
       - name: Pack Ecosystem Tarball
