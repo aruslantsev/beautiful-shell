@@ -23,47 +23,48 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-# КРИТИЧЕСКИЙ ШАГ: Перехватываем управление CMake для aarch64
-      - name: Setup CMake Wrapper for Cross-Compilation
-        if: matrix.arch == 'aarch64'
+      - name: Setup CMake Wrapper
         run: |
           mkdir -p bin
-          # Находим реальный путь к системному cmake (например, /usr/local/bin/cmake)
+          # Находим реальный cmake в системе, где бы он ни лежал
           REAL_CMAKE=$(which cmake)
-          echo "Found real cmake at: $REAL_CMAKE"
+          echo "System cmake found at: $REAL_CMAKE"
           
-          # Создаем обертку, подставляя динамически найденный путь $REAL_CMAKE
-          cat << EOF > bin/cmake
+          # Записываем скрипт-обертку
+          cat << 'EOF' > bin/cmake
           #!/bin/bash
-          # Проверяем, если cmake вызывают для конфигурации (есть .. или ../ в аргументах)
-          if [[ "\$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "\$*" == *"../"* ]]; then
-            $REAL_CMAKE \\
-              -DCMAKE_SYSTEM_NAME=Linux \\
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \\
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \\
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \\
-              "\$@"
+          REAL_SYSTEM_CMAKE临=$(which -a cmake | grep -v "$(pwd)/bin" | head -n 1)
+          # Если это сборка под aarch64 И это этап конфигурации (когда передается путь к исходникам или флаги)
+          if [ "$MATRIX_ARCH" = "aarch64" ] && { [[ "$*" == *"-DCMAKE_BUILD_TYPE"* ]] || [[ "$*" == *"../"* ]]; }; then
+            exec /usr/bin/env cmake-original \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+              "$@"
           else
-            # Во всех остальных случаях (например, --build) вызываем как обычно
-            $REAL_CMAKE "\$@"
+            # Во всех остальных случаях (для amd64 или при --build) вызываем оригинальный cmake
+            exec /usr/bin/env cmake-original "$@"
           fi
           EOF
           
+          # Чтобы не запутаться в путях, сделаем алиас на оригинальный cmake
+          ln -s "$REAL_CMAKE" bin/cmake-original
           chmod +x bin/cmake
-          # Выдвигаем наш кастомный cmake на первое место в системе
+          
+          # Добавляем нашу папку bin в начало PATH
           echo "$(pwd)/bin" >> $GITHUB_PATH
 
+      # Сборка: теперь она одинаково простая и изящная для обеих архитектур!
       - name: Configure and Build
+        env:
+          MATRIX_ARCH: ${{ matrix.arch }} # Передаем архитектуру внутрь bash окружения
         run: |
           mkdir build && cd build
           
-          if [ "${{ matrix.arch }}" = "aarch64" ]; then
-            # Наш кастомный cmake-wrapper подхватит этот вызов и добавит нужные флаги
-            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-          else
-            # Обычный системный cmake для x86_64
-            /usr/bin/cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-          fi
+          # Вызываем просто cmake. Система сама найдет нашу обертку.
+          # Обертка автоматически поймет, нужно ли пробрасывать флаги ARM64
+          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
           
           cmake --build .
 
