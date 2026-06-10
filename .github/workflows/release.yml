@@ -31,6 +31,11 @@ jobs:
           
           cat << 'EOF' > bin/cmake
           #!/bin/bash
+          # Pass through build commands unchanged
+          if [[ "$1" == "--build" ]]; then
+            exec /usr/bin/env cmake-original "$@"
+          fi
+
           # For aarch64 cross-compilation, ALWAYS inject the cross-compile toolchain
           if [ "$MATRIX_ARCH" = "aarch64" ]; then
             # Only add cross-compile flags if they're not already present
