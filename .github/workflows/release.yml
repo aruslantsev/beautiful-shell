@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-build-linux:
+  build-linux:
     name: Build (linux-${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
