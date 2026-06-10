@@ -6,30 +6,29 @@ on:
       - 'v*'
 
 jobs:
-  # 1. Сборка Linux (нативная + кросс-компиляция под ARM64)
+  # 1. Сборка Linux (Мгновенный старт: amd64 нативно, aarch64 через эмуляцию QEMU)
   build-linux:
     name: Build (linux-${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest # Этот раннер всегда выдается GitHub мгновенно, без очередей
     strategy:
       matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm64
+        arch: [amd64, aarch64]
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Configure CMake
-        run: |
-          mkdir build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-
-      - name: Build Project
-        run: |
-          cd build && cmake --build . --config Release
+      - name: Build Linux via QEMU (${{ matrix.arch }})
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu22.04
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            apt-get update
+            apt-get install -y cmake make git build-essential
+            mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+             cmake --build . --config Release
 
       - name: Pack Ecosystem Tarball
         run: |
@@ -47,7 +46,7 @@ jobs:
           path: beautiful_shell-linux-${{ matrix.arch }}.tar.gz
 
 
-  # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без кросс-компиляции)
+  # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без очередей на быстрых серверах Apple)
   build-macos:
     name: Build (darwin-${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
@@ -67,7 +66,6 @@ jobs:
       - name: Configure CMake
         run: |
           mkdir build && cd build
-          # CMake автоматически определит родную архитектуру системы машины
           cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
 
       - name: Build Project
@@ -90,7 +88,7 @@ jobs:
           path: beautiful_shell-darwin-${{ matrix.arch }}.tar.gz
 
 
-  # 3. Сборка внутри эмулятора FreeBSD
+  # 3. Сборка внутри эмулятора FreeBSD (С исправленным ключом arch)
   build-freebsd:
     name: Build (freebsd-${{ matrix.arch }})
     runs-on: ubuntu-latest
@@ -105,7 +103,7 @@ jobs:
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
-          architecture: ${{ matrix.arch }}
+          arch: ${{ matrix.arch }}
           prepare: |
             pkg install -y cmake git llvm
           run: |
