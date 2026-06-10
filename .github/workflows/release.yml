@@ -6,7 +6,6 @@ on:
       - 'v*'
 
 jobs:
-  # 1. Сборка Linux (нативная + кросс-компиляция под ARM64)
   build-linux:
     name: Build (linux-${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
@@ -47,17 +46,14 @@ jobs:
           path: beautiful_shell-linux-${{ matrix.arch }}.tar.gz
 
 
-  # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без кросс-компиляции)
   build-macos:
     name: Build (darwin-${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
-          # Старый Intel Mac (соберет строго x86_64)
           - arch: amd64
             runner: macos-15-intel
-          # Новый Apple Silicon Mac (соберет строго arm64)
           - arch: aarch64
             runner: macos-15
     steps:
@@ -67,7 +63,6 @@ jobs:
       - name: Configure CMake
         run: |
           mkdir build && cd build
-          # CMake автоматически определит родную архитектуру системы машины
           cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
 
       - name: Build Project
@@ -90,7 +85,6 @@ jobs:
           path: beautiful_shell-darwin-${{ matrix.arch }}.tar.gz
 
 
-  # 3. Сборка внутри эмулятора FreeBSD
   build-freebsd:
     name: Build (freebsd-${{ matrix.arch }})
     runs-on: ubuntu-latest
@@ -127,7 +121,6 @@ jobs:
           path: dist/beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz
 
 
-  # 4. Публикация в GitHub Releases
   publish-release:
     needs: [build-linux, build-macos, build-freebsd]
     runs-on: ubuntu-latest
