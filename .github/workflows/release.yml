@@ -15,7 +15,7 @@ jobs:
           - arch: amd64
             runner: ubuntu-latest
           - arch: aarch64
-            runner: ubuntu-latest-arm64  # Native ARM64 runner, no cross-compile needed
+            runner: ubuntu-latest-arm64
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -43,17 +43,14 @@ jobs:
           path: beautiful_shell-linux-${{ matrix.arch }}.tar.gz
 
 
-  # 2. НАЦИОНАЛЬНАЯ СБОРКА ПОД MACOS (Без очередей на быстрых серверах Apple)
   build-macos:
     name: Build (darwin-${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
-          # Старый Intel Mac (соберет строго x86_64)
           - arch: amd64
             runner: macos-15-intel
-          # Новый Apple Silicon Mac (соберет строго arm64)
           - arch: aarch64
             runner: macos-15
     steps:
@@ -85,7 +82,6 @@ jobs:
           path: beautiful_shell-darwin-${{ matrix.arch }}.tar.gz
 
 
-  # 3. Сборка внутри эмулятора FreeBSD (С исправленным ключом arch)
   build-freebsd:
     name: Build (freebsd-${{ matrix.arch }})
     runs-on: ubuntu-latest
@@ -122,7 +118,6 @@ jobs:
           path: dist/beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz
 
 
-  # 4. Публикация в GitHub Releases
   publish-release:
     needs: [build-linux, build-macos, build-freebsd]
     runs-on: ubuntu-latest
