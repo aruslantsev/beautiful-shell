@@ -1,13 +1,13 @@
-. ${_BS_PATH_PREFIX}/scripts/colors
+. "${_BS_PATH_PREFIX}/scripts/colors"
 
 __bs_print_err () {
-	echo -e "${_BS_RED}[ERROR]${_BS_RESET} $1"
+	printf '%b[ERROR]%b %s\n' "${_BS_RED}" "${_BS_RESET}" "$1"
 }
 
 __bs_print_warn () {
-	echo -e "${_BS_YELLOW}[WARNING]${_BS_RESET} $1"
+	printf '%b[WARNING]%b %s\n' "${_BS_YELLOW}" "${_BS_RESET}" "$1"
 }
 
 __bs_print_info () {
-	echo -e "${_BS_BLUE}[INFO]${_BS_RESET} $1"
+	printf '%b[INFO]%b %s\n' "${_BS_BLUE}" "${_BS_RESET}" "$1"
 }

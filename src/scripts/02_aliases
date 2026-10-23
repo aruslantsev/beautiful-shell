@@ -1,7 +1,7 @@
-if [ -f ~/.${_BS_SHELL_NAME}_aliases ]; then
-	. ~/.${_BS_SHELL_NAME}_aliases
+if [ -f "${HOME}/.${_BS_SHELL_NAME}_aliases" ]; then
+	. "${HOME}/.${_BS_SHELL_NAME}_aliases"
 fi
 
-if [ -f ~/.aliases ]; then
-	. ~/.aliases
+if [ -f "${HOME}/.aliases" ]; then
+	. "${HOME}/.aliases"
 fi

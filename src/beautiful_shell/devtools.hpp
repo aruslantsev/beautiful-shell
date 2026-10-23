@@ -1,8 +1,24 @@
 #pragma once
 #include <cstdlib>
 #include <filesystem>
+#include <memory>
 #include <git2.h>
 #include "beautiful_shell.hpp"
+
+struct Libgit2Runtime {
+    Libgit2Runtime() { git_libgit2_init(); }
+    ~Libgit2Runtime() { git_libgit2_shutdown(); }
+    Libgit2Runtime(const Libgit2Runtime&) = delete;
+    Libgit2Runtime& operator=(const Libgit2Runtime&) = delete;
+};
+
+struct GitRepoDeleter {
+    void operator()(git_repository* repo) const {
+        if (repo) git_repository_free(repo);
+    }
+};
+
+using GitRepoPtr = std::unique_ptr<git_repository, GitRepoDeleter>;
 
 
 class CondaModule : public BSModule {
@@ -57,26 +73,26 @@ private:
     }
 public:
     std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
-        git_libgit2_init(); 
-        
-        git_repository *repo = nullptr;
-        if (git_repository_open_ext(&repo, ".", 0, nullptr) != 0) {
-            git_libgit2_shutdown();
+        Libgit2Runtime git_runtime;
+
+        git_repository *raw_repo = nullptr;
+        if (git_repository_open_ext(&raw_repo, ".", 0, nullptr) != 0) {
             return ""; // Not in repo
         }
+        GitRepoPtr repo(raw_repo);
 
         std::string branch_name = "";
         git_reference *head = nullptr;
 
         // HEAD
-        if (git_repository_head(&head, repo) == 0) {
+        if (git_repository_head(&head, repo.get()) == 0) {
             // On branch -> name
             branch_name = git_reference_shorthand(head);
             git_reference_free(head);
         } else {
             // detached HEAD -> commit hash
             git_oid oid;
-            if (git_reference_name_to_id(&oid, repo, "HEAD") == 0) {
+            if (git_reference_name_to_id(&oid, repo.get(), "HEAD") == 0) {
                 char out[8];
                 git_oid_tostr(out, sizeof(out), &oid);
                 branch_name = std::string(out);
@@ -84,13 +100,11 @@ public:
         }
 
         if (branch_name.empty()) {
-            git_repository_free(repo);
-            git_libgit2_shutdown();
             return "";
         }
 
         std::string flags = "";
-        const char* git_dir = git_repository_path(repo);
+        const char* git_dir = git_repository_path(repo.get());
 
         if (git_dir != nullptr && is_repository_too_large(git_dir)) {
             // Big repo
@@ -105,7 +119,7 @@ public:
                          GIT_STATUS_OPT_DEFAULTS;
 
             git_status_list *status_list = nullptr;
-            if (git_status_list_new(&status_list, repo, &opts) == 0) {
+            if (git_status_list_new(&status_list, repo.get(), &opts) == 0) {
                 size_t count = git_status_list_entrycount(status_list);
                 bool has_staged = false;
                 bool has_unstaged = false;
@@ -153,8 +167,6 @@ public:
 
         std::string result = "Git: " + branch_name + flags + ".";
         std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
-        git_repository_free(repo);
-        git_libgit2_shutdown();
         return Colorizer::paint(result, active_color, ctx.shell, cfg.use_colors);
     }
 };

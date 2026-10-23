@@ -32,11 +32,12 @@ Copy `src/scripts` and `src/shellrc` to `~/.beautiful_shell/`
 
 Compile the binary:
 ```bash
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
+cmake -S src/beautiful_shell -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 Once the compilation succeeds, the self-contained `beautiful_shell` executable will be generated in the `build` directory. Move this binary to `~/.beautiful_shell/bin/`.
+
+Linux release binaries published from CI are fully static musl builds (Alpine). Do not enable `-DBSHELL_STATIC=ON` on a glibc host — NSS/`getpwuid` will fail at runtime.
 
 
 ## Configuration File (`~/.config/beautiful_shell/config`)
@@ -46,7 +47,7 @@ The C++ utility automatically searches for its behavior file at `~/.config/beaut
 ### Configuration Example
 ```toml
 [prompt]
-theme = "dark"              # Color theme: "dark" (default), "light", or "custom"
+theme = "dark"              # Color theme: "dark" (default) or "light"; "custom" follows dark
 use_colors = true           # Toggle ANSI color styling (true/false)
 show_root_username = false  # Hide the "root" username string (when uid=0) to save space
 time_threshold = 1.0        # Command execution time threshold (in seconds)
@@ -65,7 +66,7 @@ battery_hide_percent = 80   # Hide the battery block if charged above this thres
 ### Detailed Parameter Reference
 
 #### The `[prompt]` Section
-* `theme` *(string)*: Sets the base palette. Modules map specific color profiles based on `"dark"` and `"light"` terminal backgrounds.
+* `theme` *(string)*: Sets the base palette. Modules map specific color profiles based on `"dark"` and `"light"` terminal backgrounds. `"custom"` (and any other value) currently uses the dark palette.
 * `use_colors` *(boolean)*: Toggles global ANSI escape sequences. Set to `false` if your terminal environment doesn't support color formatting.
 * `show_root_username` *(boolean)*: Defaults to `false`. When running a root shell, the string username can be hidden to save screen space, relying solely on the red `#` prompt symbol instead.
 * `time_threshold` *(float)*: If a command takes longer than this value to execute, the utility calculates the runtime and prefixes your prompt with a human-readable timer (e.g., `[1.5s]` or `[2h15m5s]`).

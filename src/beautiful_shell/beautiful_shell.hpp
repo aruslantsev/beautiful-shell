@@ -6,7 +6,7 @@
 
 
 enum class shell {POSIX, BASH, ZSH};
-enum class color_theme {DARK, LIGHT, CUSTOM};
+enum class color_theme {DARK, LIGHT};
 
 /* From config files */
 struct BSSettings {

@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
-#include <algorithm>
 #include <toml++/toml.hpp>
 #include "beautiful_shell.hpp"
 #include "base.hpp"
@@ -35,8 +34,7 @@ inline BSSettings load_settings() {
             if (auto theme_node = (*prompt)["theme"].as_string()) {
                 std::string theme_val = std::string(theme_node->get());
                 if (theme_val == "light") cfg.color_theme = color_theme::LIGHT;
-                else if (theme_val == "dark") cfg.color_theme = color_theme::DARK;
-                else cfg.color_theme = color_theme::CUSTOM;
+                else cfg.color_theme = color_theme::DARK;  /* dark, custom, or unknown */
             }
 
             cfg.use_colors = (*prompt)["use_colors"].value_or(cfg.use_colors);
@@ -61,7 +59,9 @@ inline BSSettings load_settings() {
             cfg.battery_warn_percent = (*battery)["battery_warn_percent"].value_or(cfg.battery_warn_percent);
             cfg.battery_hide_percent = (*battery)["battery_hide_percent"].value_or(cfg.battery_hide_percent);
         }
-    } catch (const toml::parse_error& err) {}
+    } catch (const toml::parse_error& err) {
+        /* Invalid config: keep compiled-in defaults. */
+    }
     return cfg;
 }
 
@@ -80,7 +80,13 @@ BSContext parse_args(int argc, char* argv[]) {
                 ctx.shell = shell::POSIX;
             }
         }
-        else if (arg == "--time" && i + 1 < argc) ctx.exec_time_sec = std::stod(argv[++i]);
+        else if (arg == "--time" && i + 1 < argc) {
+            try {
+                ctx.exec_time_sec = std::stod(argv[++i]);
+            } catch (...) {
+                ctx.exec_time_sec = 0.0;
+            }
+        }
         else if (arg == "--pipestatus" && i + 1 < argc) {
             std::string pipe_str = argv[++i];
             std::stringstream ss(pipe_str);
@@ -98,7 +104,13 @@ BSContext parse_args(int argc, char* argv[]) {
                 ctx.jobs_count = 0;
             }
         }
-        else if (arg == "--shlvl" && i + 1 < argc) ctx.shlvl = std::stoi(argv[++i]);
+        else if (arg == "--shlvl" && i + 1 < argc) {
+            try {
+                ctx.shlvl = std::stoi(argv[++i]);
+            } catch (...) {
+                ctx.shlvl = 1;
+            }
+        }
     }
     return ctx;
 }
@@ -161,6 +173,7 @@ int main(int argc, char* argv[]) {
 
     PromptEngine engine{
         std::make_unique<SpacerModule>(
+            row_role::First,
             std::make_unique<CMDStatusModule>(),
             std::make_unique<DateTimeModule>(),
             std::make_unique<LoadAVGModule>(),
@@ -168,11 +181,13 @@ int main(int argc, char* argv[]) {
             std::make_unique<BatteryModule>()
         ),
         std::make_unique<SpacerModule>(
+            row_role::Middle,
             std::make_unique<GitModule>(),
             std::make_unique<CondaModule>(),
             std::make_unique<ESPIDFModule>()
         ),
         std::make_unique<SpacerModule>(
+            row_role::Last,
             std::make_unique<EnvMonitorModule>(),
             std::make_unique<UserNameModule>(),
             std::make_unique<PathModule>(),
