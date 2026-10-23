@@ -3,7 +3,7 @@ if [ -n "$BASH_VERSION" ]; then
 elif [ -n "$ZSH_VERSION" ]; then
 	_BS_SHELL_NAME="zsh"
 else
-    _BS_SHELL_NAME=$(echo ${0##*/} | sed 's/^-*//')  # ${SHELL##*/} is login shell
+	_BS_SHELL_NAME=$(echo "${0##*/}" | sed 's/^-*//')  # ${SHELL##*/} is login shell
 fi
 
 case "${_BS_SHELL_NAME}" in
@@ -17,15 +17,18 @@ esac
 if [ -n "${_BS_SHELL_NAME}" ]; then  # Supported shell. Can't use exit here
 	# Change it only if you know what you are doing
 	_BS_PATH_PREFIX="${HOME}/.beautiful_shell"
-	PATH=$PATH:${_BS_PATH_PREFIX}/bin
+	case ":${PATH}:" in
+		*":${_BS_PATH_PREFIX}/bin:"*) ;;
+		*) PATH="${PATH}:${_BS_PATH_PREFIX}/bin" ;;
+	esac
 
-	. ${_BS_PATH_PREFIX}/scripts/messages
+	. "${_BS_PATH_PREFIX}/scripts/messages"
 
-	. ${_BS_PATH_PREFIX}/scripts/initialize
-	. ${_BS_PATH_PREFIX}/scripts/00_path
-	. ${_BS_PATH_PREFIX}/scripts/02_aliases
-	. ${_BS_PATH_PREFIX}/scripts/03_environment
-	. ${_BS_PATH_PREFIX}/scripts/10_ssh-agent
-	. ${_BS_PATH_PREFIX}/scripts/20_history
-	. ${_BS_PATH_PREFIX}/scripts/30_devtools
+	. "${_BS_PATH_PREFIX}/scripts/initialize"
+	. "${_BS_PATH_PREFIX}/scripts/00_path"
+	. "${_BS_PATH_PREFIX}/scripts/02_aliases"
+	. "${_BS_PATH_PREFIX}/scripts/03_environment"
+	. "${_BS_PATH_PREFIX}/scripts/10_ssh-agent"
+	. "${_BS_PATH_PREFIX}/scripts/20_history"
+	. "${_BS_PATH_PREFIX}/scripts/30_devtools"
 fi

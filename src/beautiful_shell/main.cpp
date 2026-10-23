@@ -80,7 +80,13 @@ BSContext parse_args(int argc, char* argv[]) {
                 ctx.shell = shell::POSIX;
             }
         }
-        else if (arg == "--time" && i + 1 < argc) ctx.exec_time_sec = std::stod(argv[++i]);
+        else if (arg == "--time" && i + 1 < argc) {
+            try {
+                ctx.exec_time_sec = std::stod(argv[++i]);
+            } catch (...) {
+                ctx.exec_time_sec = 0.0;
+            }
+        }
         else if (arg == "--pipestatus" && i + 1 < argc) {
             std::string pipe_str = argv[++i];
             std::stringstream ss(pipe_str);
@@ -98,7 +104,13 @@ BSContext parse_args(int argc, char* argv[]) {
                 ctx.jobs_count = 0;
             }
         }
-        else if (arg == "--shlvl" && i + 1 < argc) ctx.shlvl = std::stoi(argv[++i]);
+        else if (arg == "--shlvl" && i + 1 < argc) {
+            try {
+                ctx.shlvl = std::stoi(argv[++i]);
+            } catch (...) {
+                ctx.shlvl = 1;
+            }
+        }
     }
     return ctx;
 }

@@ -5,11 +5,16 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-linux:
     name: Build (linux-${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -51,6 +56,7 @@ jobs:
     name: Build (darwin-${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -90,6 +96,7 @@ jobs:
     name: Build (freebsd-${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         arch: [amd64, aarch64]
     steps:
@@ -137,10 +144,14 @@ jobs:
         run: |
           mkdir -p release-assets
           find all-artifacts -name "*.tar.gz" -exec cp {} release-assets/ \;
+          cd release-assets
+          sha256sum *.tar.gz > SHA256SUMS
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-assets/*.tar.gz
+          files: |
+            release-assets/*.tar.gz
+            release-assets/SHA256SUMS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

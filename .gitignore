@@ -1,2 +1,5 @@
 **/*.o
 # **/beautiful_prompt
+build/
+build-verify/
+/build*

@@ -4,8 +4,14 @@ project(beautiful_shell CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
+endif()
+
 # Fully static, dependency-free executable for portable release builds.
-# Not supported on Apple (no static libSystem); harmless/off by default elsewhere.
+# Not supported on Apple (no static libSystem); off by default elsewhere.
+# -static + glibc breaks NSS/getpwuid (username lookup fails at runtime).
+# Linux release builds use musl via Alpine, where fully static linking is safe.
 option(BSHELL_STATIC "Statically link the final executable (portable release builds)" OFF)
 
 include(FetchContent)
@@ -35,14 +41,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tomlplusplus)
 
-FetchContent_Declare(
-    libgit2_src
-    GIT_REPOSITORY https://github.com/libgit2/libgit2.git
-    GIT_TAG v1.9.4
-)
 FetchContent_GetProperties(libgit2_src)
 if(NOT libgit2_src_POPULATED)
-    FetchContent_Populate(libgit2_src)
+    FetchContent_Populate(
+        libgit2_src
+        GIT_REPOSITORY https://github.com/libgit2/libgit2.git
+        GIT_TAG v1.9.4
+        SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/libgit2_src-src"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/libgit2_src-build"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/_deps/libgit2_src-subbuild"
+    )
 endif()
 
 set(LIBGIT2_FILENAME "libgit2.a")
@@ -113,7 +121,8 @@ endif()
 
 # Portable release builds: link the C/C++ runtime and all deps statically so the
 # resulting binary has no external shared-library requirements. Apple does not
-# support fully static executables, so this is skipped there.
+# support fully static executables, so this is skipped there. Do not enable
+# this on glibc hosts (NSS/getpwuid will fail); use musl instead.
 if(BSHELL_STATIC AND NOT APPLE)
     target_link_options(beautiful_shell PRIVATE -static)
 endif()

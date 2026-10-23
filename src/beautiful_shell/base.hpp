@@ -29,10 +29,10 @@ public:
             username = "";
         }
         char hostname_chr[MAXHOSTNAMELEN + 1];
-        if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
+        if (gethostname(hostname_chr, sizeof(hostname_chr)) != 0) {
             hostname = "[unknown hostname]";
         } else {
-            hostname_chr[MAXHOSTNAMELEN] = '\0';
+            hostname_chr[sizeof(hostname_chr) - 1] = '\0';
             hostname = std::string(hostname_chr);
         }
 
@@ -170,9 +170,10 @@ inline std::string set_window_title(shell s) {
         username = std::string(pw->pw_name);
     }
     char hostname_chr[MAXHOSTNAMELEN + 1];
-    if (gethostname(hostname_chr, MAXHOSTNAMELEN) != 0) {
+    if (gethostname(hostname_chr, sizeof(hostname_chr)) != 0) {
         hostname = "[unknown hostname]";
     } else {
+        hostname_chr[sizeof(hostname_chr) - 1] = '\0';
         hostname = std::string(hostname_chr);
     }
 
