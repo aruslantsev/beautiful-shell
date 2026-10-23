@@ -6,6 +6,7 @@
 #include <string>
 #include <cstdlib>
 #if defined(__linux__)
+#include <fstream>
 #include <sys/sysinfo.h>
 #elif defined(__APPLE__)
 #include <sys/types.h>
@@ -33,7 +34,7 @@ public:
         auto tm = *std::localtime(&now);
         std::ostringstream oss;
         oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(oss.str(), active_color, ctx.shell, cfg.use_colors);
     }
 };
@@ -52,7 +53,7 @@ public:
             out << std::fixed << std::setprecision(2) << load[0] << ", ";
             out << std::fixed << std::setprecision(2) << load[1] << ", ";
             out << std::fixed << std::setprecision(2) << load[2] << ".";
-            std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+            std::string active_color = pick_theme_color(cfg, color_dark, color_light);
             return Colorizer::paint(out.str(), active_color, ctx.shell, cfg.use_colors);
         }
         return "";
@@ -73,14 +74,34 @@ public:
         bool success = false;
 
 #if defined(__linux__)
-        struct sysinfo si;
-        if (sysinfo(&si) == 0) {
-            unsigned long long multiplier = si.mem_unit;
-            total_ram = si.totalram * multiplier;
-            used_ram = (si.totalram - si.freeram) * multiplier;
-            total_swap = si.totalswap * multiplier;
-            used_swap = (si.totalswap - si.freeswap) * multiplier;
+        unsigned long long mem_total_kb = 0, mem_avail_kb = 0, swap_total_kb = 0, swap_free_kb = 0;
+        {
+            std::ifstream meminfo("/proc/meminfo");
+            std::string key, unit;
+            unsigned long long value = 0;
+            while (meminfo >> key >> value >> unit) {
+                if (key == "MemTotal:") mem_total_kb = value;
+                else if (key == "MemAvailable:") mem_avail_kb = value;
+                else if (key == "SwapTotal:") swap_total_kb = value;
+                else if (key == "SwapFree:") swap_free_kb = value;
+            }
+        }
+        if (mem_total_kb > 0 && mem_avail_kb <= mem_total_kb) {
+            total_ram = mem_total_kb * 1024ULL;
+            used_ram = (mem_total_kb - mem_avail_kb) * 1024ULL;
+            total_swap = swap_total_kb * 1024ULL;
+            used_swap = (swap_total_kb > swap_free_kb) ? (swap_total_kb - swap_free_kb) * 1024ULL : 0;
             success = true;
+        } else {
+            struct sysinfo si;
+            if (sysinfo(&si) == 0) {
+                unsigned long long multiplier = si.mem_unit;
+                total_ram = si.totalram * multiplier;
+                used_ram = (si.totalram - si.freeram) * multiplier;
+                total_swap = si.totalswap * multiplier;
+                used_swap = (si.totalswap - si.freeswap) * multiplier;
+                success = true;
+            }
         }
 #elif defined(__APPLE__)
         uint64_t memsize = 0;
@@ -93,8 +114,10 @@ public:
                 vm_statistics64_data_t vm;
                 mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
                 if (host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&vm, &count) == KERN_SUCCESS) {
-                    unsigned long long free_pages = vm.free_count + vm.speculative_count;
-                    used_ram = total_ram - (free_pages * page_size);
+                    unsigned long long used_pages = static_cast<unsigned long long>(vm.active_count)
+                        + vm.wire_count
+                        + vm.compressor_page_count;
+                    used_ram = used_pages * page_size;
 
                     struct xsw_usage swap;
                     sz = sizeof(swap);
@@ -181,7 +204,7 @@ public:
         }
         out << ".";
 
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(out.str(), active_color, ctx.shell, cfg.use_colors);
     }
 };

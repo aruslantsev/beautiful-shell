@@ -1,15 +1,15 @@
 if [ "${_BS_CONDA_INIT:-0}" -eq 1 ]; then
 	case "${_BS_SHELL_NAME}" in
 		bash|zsh)
-			if [ -d ~/miniconda3 ]; then
-				eval "$(~/miniconda3/bin/conda shell."${_BS_SHELL_NAME}" hook)"
+			if [ -d "${HOME}/miniconda3" ]; then
+				eval "$("${HOME}/miniconda3/bin/conda" shell."${_BS_SHELL_NAME}" hook)"
 				conda deactivate
 
-				if [ ! -f ~/.condarc ]; then
-					__bs_print_warn "~/.condarc is missing, creating it now"
-					touch ~/.condarc
+				if [ ! -f "${HOME}/.condarc" ]; then
+					__bs_print_warn "${HOME}/.condarc is missing, creating it now"
+					touch "${HOME}/.condarc"
 				fi
-				grep -i "changeps1:[[:space:]]*false" ~/.condarc > /dev/null || conda config --set changeps1 False
+				grep -i "changeps1:[[:space:]]*false" "${HOME}/.condarc" > /dev/null || conda config --set changeps1 False
 			fi
 			;;
 	esac

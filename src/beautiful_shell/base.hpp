@@ -69,7 +69,7 @@ public:
         }
         std::string hostname = get_hostname();
 
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         if (uid == 0) active_color = color_root;
         return Colorizer::paint(username + "@" + hostname, active_color, ctx.shell, cfg.use_colors);
     }
@@ -86,7 +86,7 @@ public:
         if (geteuid() == 0) {
             sym = "#";
         }
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(sym, active_color, ctx.shell, cfg.use_colors);
     }
 };
@@ -98,7 +98,7 @@ private:
     std::string color_light = YELLOW;
 public:
     std::string render(const BSContext &ctx, const BSSettings &cfg) const override {
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(current_path_display(), active_color, ctx.shell, cfg.use_colors);
     }
 };
@@ -133,7 +133,7 @@ public:
 
         if (inner_content.empty()) return "";
 
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         switch (role) {
             case row_role::First:
                 return Colorizer::paint("┌─", active_color, ctx.shell, cfg.use_colors) + " " + inner_content;

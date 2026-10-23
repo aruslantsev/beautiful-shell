@@ -18,7 +18,14 @@ struct GitRepoDeleter {
     }
 };
 
+struct GitStatusDeleter {
+    void operator()(git_status_list* list) const {
+        if (list) git_status_list_free(list);
+    }
+};
+
 using GitRepoPtr = std::unique_ptr<git_repository, GitRepoDeleter>;
+using GitStatusPtr = std::unique_ptr<git_status_list, GitStatusDeleter>;
 
 
 class CondaModule : public BSModule {
@@ -32,7 +39,7 @@ public:
         if(conda_env != nullptr && std::string(conda_env).length() > 0) {
             result = "Conda: " + std::string(conda_env) + ".";
         }
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(result, active_color, ctx.shell, cfg.use_colors);
     }
 };
@@ -49,7 +56,7 @@ public:
         if(esp_env != nullptr && std::string(esp_env).length() > 0) {
             result = "ESP IDF: " + std::string(esp_env) + ".";
         }
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(result, active_color, ctx.shell, cfg.use_colors);
     }
 };
@@ -111,22 +118,25 @@ public:
             flags = "~"; 
         } else {
             // Fast status scan
-            git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+            git_status_options opts;
+            git_status_options_init(&opts, GIT_STATUS_OPTIONS_VERSION);
             opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
             // No submodules
             opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | 
                          GIT_STATUS_OPT_EXCLUDE_SUBMODULES | 
                          GIT_STATUS_OPT_DEFAULTS;
 
-            git_status_list *status_list = nullptr;
-            if (git_status_list_new(&status_list, repo.get(), &opts) == 0) {
-                size_t count = git_status_list_entrycount(status_list);
+            git_status_list *raw_status = nullptr;
+            if (git_status_list_new(&raw_status, repo.get(), &opts) == 0) {
+                GitStatusPtr status_list(raw_status);
+                size_t count = git_status_list_entrycount(status_list.get());
                 bool has_staged = false;
                 bool has_unstaged = false;
                 bool has_untracked = false;
 
                 for (size_t i = 0; i < count; ++i) {
-                    const git_status_entry *entry = git_status_byindex(status_list, i);
+                    const git_status_entry *entry = git_status_byindex(status_list.get(), i);
+                    if (!entry) continue;
                     unsigned int s = entry->status;
 
                     // staged -> '+'
@@ -146,8 +156,6 @@ public:
                     }
                 }
 
-                git_status_list_free(status_list);
-
                 if (has_staged)    flags += "+";
                 if (has_unstaged)  flags += "*";
                 if (has_untracked) flags += (ctx.shell == shell::ZSH) ? "%%" : "%";
@@ -166,7 +174,7 @@ public:
         }
 
         std::string result = "Git: " + branch_name + flags + ".";
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         return Colorizer::paint(result, active_color, ctx.shell, cfg.use_colors);
     }
 };

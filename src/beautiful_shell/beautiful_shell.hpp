@@ -103,3 +103,7 @@ public:
         return open_seq + text + close_seq;
     }
 };
+
+inline const std::string& pick_theme_color(const BSSettings& cfg, const std::string& dark, const std::string& light) {
+    return (cfg.color_theme == color_theme::DARK) ? dark : light;
+}

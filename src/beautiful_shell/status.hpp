@@ -42,7 +42,7 @@ public:
 
         if (!result.empty()) {
             result = "[" + result + "]";
-            std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+            std::string active_color = pick_theme_color(cfg, color_dark, color_light);
             return Colorizer::paint(result, active_color, ctx.shell, cfg.use_colors);
         }
 

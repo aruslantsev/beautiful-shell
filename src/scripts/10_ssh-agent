@@ -1,11 +1,12 @@
 if [ "${_BS_RUN_SSH_AGENT:-1}" -eq 1 ]; then
-	if [ -d ~/.ssh ]; then
+	if [ -d "${HOME}/.ssh" ]; then
 		unset SSH_ASKPASS
-		SOCKET="$HOME/.ssh/ssh-agent.sock"
-		# Match this socket only. A bare "ssh-agent" also hits helpers whose
-		# environment contains SSH_AUTH_SOCK=.../ssh-agent.sock (e.g. Cursor).
-		# pgrep -c is GNU-only; use the PID list length instead.
-		_bs_agent_pids=$(pgrep -u "$USER" -f "ssh-agent.*$SOCKET" 2>/dev/null)
+		SOCKET="${HOME}/.ssh/ssh-agent.sock"
+		# Escape regex metacharacters so pgrep -f matches the path literally.
+		# (A bare "ssh-agent" also hits helpers whose environment contains
+		# SSH_AUTH_SOCK=.../ssh-agent.sock, e.g. Cursor.)
+		_bs_sock_re=$(printf '%s' "$SOCKET" | sed 's/[.[\*^$()+?{|]/\\&/g')
+		_bs_agent_pids=$(pgrep -u "$USER" -f "ssh-agent.*${_bs_sock_re}" 2>/dev/null)
 		_bs_pgrep_status=$?
 		if [ "${_bs_pgrep_status}" -ge 2 ]; then
 			__bs_print_warn "Could not query ssh-agent processes; leaving socket unchanged."
@@ -25,7 +26,7 @@ if [ "${_BS_RUN_SSH_AGENT:-1}" -eq 1 ]; then
 			if [ ! -S "$SOCKET" ]; then
 				__bs_print_info "Starting ssh-agent"
 				ssh-agent -a "$SOCKET" > /dev/null
-				_bs_agent_pids=$(pgrep -u "$USER" -f "ssh-agent.*$SOCKET" 2>/dev/null)
+				_bs_agent_pids=$(pgrep -u "$USER" -f "ssh-agent.*${_bs_sock_re}" 2>/dev/null)
 				if [ ! -f "${HOME}/.ssh/config" ]; then
 					__bs_print_warn "${HOME}/.ssh/config does not exist, creating..."
 					touch "${HOME}/.ssh/config"
@@ -36,8 +37,8 @@ if [ "${_BS_RUN_SSH_AGENT:-1}" -eq 1 ]; then
 			export SSH_AUTH_SOCK="$SOCKET"
 			export SSH_AGENT_PID=$(printf '%s\n' "${_bs_agent_pids}" | head -n1)
 		fi
-		unset SOCKET _bs_agent_pids _bs_pgrep_status _bs_n_agents
+		unset SOCKET _bs_sock_re _bs_agent_pids _bs_pgrep_status _bs_n_agents
 	else
-		__bs_print_err "Directory ~/.ssh does not exist. ssh-agent failed to start"
+		__bs_print_err "Directory ${HOME}/.ssh does not exist. ssh-agent failed to start"
 	fi
 fi

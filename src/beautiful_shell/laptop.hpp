@@ -32,47 +32,59 @@ public:
         if (!cfg.show_battery) return "";
 
 #if defined(__linux__)
-        std::string bat_dir = "/sys/class/power_supply/BAT0";
-        if (!std::filesystem::exists(bat_dir)) {
-            bat_dir = "/sys/class/power_supply/BAT1";
+        std::string bat_dir;
+        std::error_code bat_ec;
+        for (const auto& entry : std::filesystem::directory_iterator("/sys/class/power_supply", bat_ec)) {
+            std::ifstream type_file(entry.path() / "type");
+            std::string type;
+            if (type_file >> type && type == "Battery") {
+                bat_dir = entry.path().string();
+                break;
+            }
         }
 
-        std::ifstream cap_file(bat_dir + "/capacity");
-        if (cap_file >> percentage) {
-            has_battery = true;
-            
-            std::ifstream stat_file(bat_dir + "/status");
-            std::string status;
-            if (std::getline(stat_file, status)) {
-                if (status.find("Charging") != std::string::npos && status.find("Not") == std::string::npos) {
-                    is_charging = true;
-                } else if (status.find("Not charging") != std::string::npos || status.find("Full") != std::string::npos) {
-                    is_not_charging = true;
-                } else if (status.find("Discharging") != std::string::npos) {
-                    is_discharging = true;
+        if (!bat_dir.empty()) {
+            std::ifstream cap_file(bat_dir + "/capacity");
+            if (cap_file >> percentage) {
+                has_battery = true;
+
+                std::ifstream stat_file(bat_dir + "/status");
+                std::string status;
+                if (std::getline(stat_file, status)) {
+                    if (status.find("Charging") != std::string::npos && status.find("Not") == std::string::npos) {
+                        is_charging = true;
+                    } else if (status.find("Not charging") != std::string::npos || status.find("Full") != std::string::npos) {
+                        is_not_charging = true;
+                    } else if (status.find("Discharging") != std::string::npos) {
+                        is_discharging = true;
+                    }
                 }
             }
         }
 
 #elif defined(__APPLE__)
         CFTypeRef ps_info = IOPSCopyPowerSourcesInfo();
-        CFArrayRef ps_list = IOPSCopyPowerSourcesList(ps_info);
+        if (ps_info) {
+            CFArrayRef ps_list = IOPSCopyPowerSourcesList(ps_info);
+            if (ps_list) {
+                CFIndex count = CFArrayGetCount(ps_list);
+                for (CFIndex i = 0; i < count && !has_battery; ++i) {
+                    CFDictionaryRef p_source = IOPSGetPowerSourceDescription(
+                        ps_info, CFArrayGetValueAtIndex(ps_list, i));
+                    if (!p_source) continue;
 
-        if (ps_list && CFArrayGetCount(ps_list) > 0) {
-            // First power source
-            CFDictionaryRef p_source = IOPSGetPowerSourceDescription(ps_info, CFArrayGetValueAtIndex(ps_list, 0));
-            if (p_source) {
-                // Internal bat; not ups/stationary mac
-                CFStringRef type = (CFStringRef)CFDictionaryGetValue(p_source, CFSTR(kIOPSTypeKey));
-                if (type && CFStringCompare(type, CFSTR(kIOPSInternalBatteryType), 0) == kCFCompareEqualTo) {
-                    
+                    CFStringRef type = (CFStringRef)CFDictionaryGetValue(p_source, CFSTR(kIOPSTypeKey));
+                    if (!type || CFStringCompare(type, CFSTR(kIOPSInternalBatteryType), 0) != kCFCompareEqualTo) {
+                        continue;
+                    }
+
                     CFNumberRef cap = (CFNumberRef)CFDictionaryGetValue(p_source, CFSTR(kIOPSCurrentCapacityKey));
                     CFNumberRef max_cap = (CFNumberRef)CFDictionaryGetValue(p_source, CFSTR(kIOPSMaxCapacityKey));
                     int cur_val = 0, max_val = 100;
-                    
+
                     if (cap) CFNumberGetValue(cap, kCFNumberIntType, &cur_val);
                     if (max_cap) CFNumberGetValue(max_cap, kCFNumberIntType, &max_val);
-                    
+
                     if (max_val > 0) {
                         percentage = (cur_val * 100) / max_val;
                         has_battery = true;
@@ -80,27 +92,24 @@ public:
 
                     CFStringRef state = (CFStringRef)CFDictionaryGetValue(p_source, CFSTR(kIOPSPowerSourceStateKey));
                     CFBooleanRef charging = (CFBooleanRef)CFDictionaryGetValue(p_source, CFSTR(kIOPSIsChargingKey));
-                    bool mac_is_charging = false;
-                    if (charging) {
-                        mac_is_charging = CFBooleanGetValue(charging);
-                    }
+                    bool mac_is_charging = charging && CFBooleanGetValue(charging);
 
                     if (state) {
                         if (CFStringCompare(state, CFSTR(kIOPSBatteryPowerValue), 0) == kCFCompareEqualTo) {
-                            is_discharging = true; // bat -> discharge
+                            is_discharging = true;
                         } else if (CFStringCompare(state, CFSTR(kIOPSACPowerValue), 0) == kCFCompareEqualTo) {
                             if (mac_is_charging) {
-                                is_charging = true;     // ac, charge
+                                is_charging = true;
                             } else {
-                                is_not_charging = true; // ac, no charge
+                                is_not_charging = true;
                             }
                         }
                     }
                 }
+                CFRelease(ps_list);
             }
+            CFRelease(ps_info);
         }
-        if (ps_list) CFRelease(ps_list);
-        if (ps_info) CFRelease(ps_info);
 
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined (__DragonFly__)
         int units = 0;
@@ -144,7 +153,7 @@ public:
 
         std::string result = "Bat: " + std::to_string(percentage) + ((ctx.shell == shell::ZSH) ? "%%" : "%") + state_sym + ".";
         
-        std::string active_color = (cfg.color_theme == color_theme::DARK) ? color_dark : color_light;
+        std::string active_color = pick_theme_color(cfg, color_dark, color_light);
         
         if ((is_charging || is_not_charging) && percentage > cfg.battery_hide_percent) return "";
         
