@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <filesystem>
 #include <cstdlib>
 #include <toml++/toml.hpp>
 #include "beautiful_shell.hpp"
@@ -138,12 +140,12 @@ int main(int argc, char* argv[]) {
                     << "    if [ -n \"$bs_start_time\" ]; then\n"
                     << "        exec_time=$(awk \"BEGIN {print $end_time - $bs_start_time}\" 2>/dev/null || echo 0);\n"
                     << "    fi;\n"
-                    << "    local env_jobs=$(jobs | wc -l);\n"
+                    << "    local env_jobs=$(jobs -p | wc -l);\n"
                     << "    PS1=\"$(beautiful_shell --shell bash --pipestatus \"${bs_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
                     << "    bs_start_time=\"\";\n"
                     << "};\n"
                     << "trap 'beautiful_shell_start_time' DEBUG;\n"
-                    << "PROMPT_COMMAND=beautiful_shell_set_ps1;\n";
+                    << "PROMPT_COMMAND=\"beautiful_shell_set_ps1${PROMPT_COMMAND:+;$PROMPT_COMMAND}\";\n";
             return 0;
         } 
         else if (target_shell == "zsh") {

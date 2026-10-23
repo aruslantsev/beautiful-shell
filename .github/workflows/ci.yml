@@ -17,6 +17,9 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Check installer syntax
+        run: sh -n install.sh
+
       - name: Cache CMake dependencies
         uses: actions/cache@v4
         with:
@@ -31,3 +34,9 @@ jobs:
         run: |
           cmake -S src/beautiful_shell -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
+
+      - name: Smoke test
+        run: |
+          ./build/beautiful_shell --shell bash --time 0 --pipestatus 0 --jobs 0 --shlvl 1 >/dev/null
+          ./build/beautiful_shell --shell bash --time bogus --shlvl bogus >/dev/null
+          ./build/beautiful_shell init bash | grep -q beautiful_shell_set_ps1

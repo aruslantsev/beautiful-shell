@@ -97,6 +97,12 @@ if(BSHELL_ARCH_FLAGS)
     target_compile_options(beautiful_shell PRIVATE ${BSHELL_ARCH_FLAGS})
 endif()
 
+if(MSVC)
+    target_compile_options(beautiful_shell PRIVATE /W4)
+else()
+    target_compile_options(beautiful_shell PRIVATE -Wall -Wextra)
+endif()
+
 target_include_directories(beautiful_shell PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

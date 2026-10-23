@@ -1,4 +1,8 @@
-eval "$(beautiful_shell init "${_BS_SHELL_NAME}")"
+if command -v beautiful_shell >/dev/null 2>&1; then
+	eval "$(beautiful_shell init "${_BS_SHELL_NAME}")"
+else
+	__bs_print_err "beautiful_shell not found on PATH; prompt hooks were not installed"
+fi
 # PS1_BASH_ROOT="\[\e]0;\u@\h:\w\a\]\[\e[01;31m\]\h\[\e[01;34m\] \w \$ \[\e[00m\]"
 # PS1_BASH="\[\e]0;\u@\h:\w\a\]\[\e[01;32m\]\u@\h\[\e[01;34m\] \w\[\e[01;34m\] \$ \[\e[00m\]"
 # PS1_ZSH='%n@%m %1~ %# '
