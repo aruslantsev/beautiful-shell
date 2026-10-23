@@ -20,12 +20,16 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Configure and Build
+      - name: Configure and Build (static, musl via Alpine)
         run: |
-          rm -rf build
-          mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
-          cmake --build . --config Release
+          docker run --rm -v "$PWD":/src -w /src alpine:3.20 sh -c '
+            set -e
+            apk add --no-cache build-base cmake git linux-headers
+            rm -rf build
+            mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release -DBSHELL_STATIC=ON ../src/beautiful_shell
+            cmake --build . --config Release
+          '
 
       - name: Pack Ecosystem Tarball
         run: |
@@ -60,7 +64,7 @@ jobs:
       - name: Configure CMake
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 ../src/beautiful_shell
 
       - name: Build Project
         run: |
@@ -101,7 +105,7 @@ jobs:
             pkg install -y cmake git llvm
           run: |
             mkdir build && cd build
-            cmake -DCMAKE_BUILD_TYPE=Release ../src/beautiful_shell
+            cmake -DCMAKE_BUILD_TYPE=Release -DBSHELL_STATIC=ON ../src/beautiful_shell
             cmake --build . --config Release
             cd ..
             mkdir -p dist/.beautiful_shell/bin
@@ -115,12 +119,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: beautiful_shell-freebsd-${{ matrix.arch }}
-          path: dist/beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz
+          path: beautiful_shell-freebsd-${{ matrix.arch }}.tar.gz
 
 
   publish-release:
     needs: [build-linux, build-macos, build-freebsd]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
