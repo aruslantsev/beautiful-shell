@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 #include "beautiful_shell.hpp"
 
 
@@ -26,16 +27,15 @@ public:
         }
         if (ctx.exec_time_sec >= cfg.time_threshold_sec) {
             ret += ret.empty() ? "[" : "|";
-            std::string execution_time = "";
-            char buffer[1024];
+            char buffer[32];
             if (ctx.exec_time_sec < 10) {
                 snprintf(buffer, sizeof(buffer), "%.1fs", ctx.exec_time_sec);
                 ret += std::string(buffer);
             } else {
                 int d = static_cast<int>(ctx.exec_time_sec) / 60 / 60 / 24;
-	            int h = static_cast<int>(ctx.exec_time_sec) / 60 / 60 % 24;
-	            int m = static_cast<int>(ctx.exec_time_sec) / 60 % 60;
-	            int s = static_cast<int>(ctx.exec_time_sec) % 60;
+                int h = static_cast<int>(ctx.exec_time_sec) / 60 / 60 % 24;
+                int m = static_cast<int>(ctx.exec_time_sec) / 60 % 60;
+                int s = static_cast<int>(ctx.exec_time_sec) % 60;
                 if (d > 0) {
                     snprintf(buffer, sizeof(buffer), "%dd", d);
                     ret += std::string(buffer);

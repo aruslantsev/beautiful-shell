@@ -26,6 +26,11 @@ if [ "${_BS_RUN_SSH_AGENT:-1}" -eq 1 ]; then
 				__bs_print_info "Starting ssh-agent"
 				ssh-agent -a "$SOCKET" > /dev/null
 				_bs_agent_pids=$(pgrep -u "$USER" -f "ssh-agent.*$SOCKET" 2>/dev/null)
+				if [ ! -f "${HOME}/.ssh/config" ]; then
+					__bs_print_warn "${HOME}/.ssh/config does not exist, creating..."
+					touch "${HOME}/.ssh/config"
+				fi
+				grep "AddKeysToAgent[[:space:]]yes" "${HOME}/.ssh/config" > /dev/null || __bs_print_info 'Insert "AddKeysToAgent yes" into your ~/.ssh/config'
 			fi
 
 			export SSH_AUTH_SOCK="$SOCKET"
