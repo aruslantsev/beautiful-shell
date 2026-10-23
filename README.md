@@ -23,18 +23,35 @@ The prompt layout is built programmatically by the `PromptEngine` via an aggrega
 
 ## Building and Installation
 
-### Prerequisites
+### Install from a release
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh
+```
+
+The installer downloads the matching GitHub release tarball for your OS and architecture, verifies `SHA256SUMS`, unpacks into `~/.beautiful_shell`, and appends the `shellrc` hook to `~/.bashrc` and/or `~/.zshrc` when those files exist. If your current shell is bash or zsh and its RC file is missing, that one file is created with the hook.
+
+```bash
+# Specific version
+curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh -s -- --version v1.0.0
+# or
+VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh
+
+# Unpack only; do not edit RC files
+curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh -s -- --no-hook
+```
+
+### Build from source
+
 You only need a C++17-compliant compiler (GCC or Clang) and CMake (>= 3.15). All external dependencies (`libgit2` and `tomlplusplus`) are automatically downloaded, configured, and statically linked during the build process.
 
-### Installation
+Copy `src/scripts` and `src/shellrc` to `~/.beautiful_shell/`, then compile the binary:
 
-Copy `src/scripts` and `src/shellrc` to `~/.beautiful_shell/`
-
-Compile the binary:
 ```bash
 cmake -S src/beautiful_shell -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
+
 Once the compilation succeeds, the self-contained `beautiful_shell` executable will be generated in the `build` directory. Move this binary to `~/.beautiful_shell/bin/`.
 
 Linux release binaries published from CI are fully static musl builds (Alpine). Do not enable `-DBSHELL_STATIC=ON` on a glibc host — NSS/`getpwuid` will fail at runtime.
@@ -144,7 +161,7 @@ The framework attempts to discover and source custom user-space dotfiles seamles
 
 ## Shell Integration Deployment
 
-To wire the entire pipeline into your active shell environment, append the framework initialization check block to your primary terminal target configuration.
+The release installer appends this hook to `~/.bashrc` and/or `~/.zshrc` when those files exist (use `--no-hook` to skip). For a from-source install, append the same block yourself:
 
 ### For Bash (`~/.bashrc`)
 ```bash
