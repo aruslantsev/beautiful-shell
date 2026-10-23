@@ -26,19 +26,19 @@ The prompt layout is built programmatically by the `PromptEngine` via an aggrega
 ### Install from a release
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/master/install.sh | sh
 ```
 
 The installer downloads the matching GitHub release tarball for your OS and architecture, verifies `SHA256SUMS`, unpacks into `~/.beautiful_shell`, and appends the `shellrc` hook to `~/.bashrc` and/or `~/.zshrc` when those files exist. If your current shell is bash or zsh and its RC file is missing, that one file is created with the hook.
 
 ```bash
 # Specific version
-curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh -s -- --version v1.0.0
+curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/master/install.sh | sh -s -- --version v1.0.0
 # or
-VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh
+VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/master/install.sh | sh
 
 # Unpack only; do not edit RC files
-curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/main/install.sh | sh -s -- --no-hook
+curl -fsSL https://raw.githubusercontent.com/aruslantsev/beautiful-shell/master/install.sh | sh -s -- --no-hook
 ```
 
 ### Build from source
