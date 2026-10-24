@@ -138,14 +138,14 @@ int main(int argc, char* argv[]) {
                     << "    local end_time=${EPOCHREALTIME:-$(date +%s.%N)};\n"
                     << "    local exec_time=0;\n"
                     << "    if [ -n \"$bs_start_time\" ]; then\n"
-                    << "        exec_time=$(awk \"BEGIN {print $end_time - $bs_start_time}\" 2>/dev/null || echo 0);\n"
+                    << "        exec_time=$(awk -v start=\"$bs_start_time\" -v end=\"$end_time\" 'BEGIN { printf \"%.6f\", end - start }' 2>/dev/null || echo 0);\n"
                     << "    fi;\n"
                     << "    local env_jobs=$(jobs -p | wc -l);\n"
-                    << "    PS1=\"$(beautiful_shell --shell bash --pipestatus \"${bs_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
+                    << "    PS1=\"$(beautiful_shell --shell bash --pipestatus \"${bs_pipe[*]}\" --time \"$exec_time\" --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
                     << "    bs_start_time=\"\";\n"
                     << "};\n"
                     << "trap 'beautiful_shell_start_time' DEBUG;\n"
-                    << "PROMPT_COMMAND=\"beautiful_shell_set_ps1${PROMPT_COMMAND:+;$PROMPT_COMMAND}\";\n";
+                    << "PROMPT_COMMAND=beautiful_shell_set_ps1;\n";
             return 0;
         } 
         else if (target_shell == "zsh") {
@@ -155,11 +155,11 @@ int main(int argc, char* argv[]) {
                     << "beautiful_shell_precmd() {\n"
                     << "    local bs_pipe=(\"${pipestatus[@]}\");\n"
                     << "    local exec_time=0;\n"
-                    << "    if [ -n \"$bs_start_time\" ]; then\n"
-                    << "        exec_time=$(( EPOCHREALTIME - bs_start_time ))\n"
+                    << "    if [ -n \"${bs_start_time:-}\" ]; then\n"
+                    << "        exec_time=$(awk -v start=\"${bs_start_time}\" -v end=\"${EPOCHREALTIME:-$(date +%s.%N)}\" 'BEGIN { printf \"%.6f\", end - start }' 2>/dev/null || echo 0)\n"
                     << "    fi;\n"
                     << "    local env_jobs=${#jobstates};\n"
-                    << "    PROMPT=\"$(beautiful_shell --shell zsh --pipestatus \"${bs_pipe[*]}\" --time $exec_time --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
+                    << "    PROMPT=\"$(beautiful_shell --shell zsh --pipestatus \"${bs_pipe[*]}\" --time \"$exec_time\" --jobs \"$env_jobs\" --shlvl \"$SHLVL\")\";\n"
                     << "    bs_start_time=\"\"\n"
                     << "}\n"
                     << "autoload -Uz add-zsh-hook\n"
