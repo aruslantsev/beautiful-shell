@@ -129,7 +129,11 @@ int main(int argc, char* argv[]) {
         std::cout << "_BS_CONDA_INIT=" << (cfg.conda_init ? "1" : "0") << "\n";
 
         if (target_shell == "bash") {
-            std::cout << "bs_start_time=\"\";\n"
+            std::cout << "if [ -n \"${_BS_BASH_INIT:-}\" ]; then\n"
+                    << "    return 0;\n"
+                    << "fi\n"
+                    << "_BS_BASH_INIT=1;\n"
+                    << "bs_start_time=\"\";\n"
                     << "beautiful_shell_start_time() {\n"
                     << "    [ -z \"$bs_start_time\" ] && bs_start_time=${EPOCHREALTIME:-$(date +%s.%N)};\n"
                     << "};\n"
@@ -149,7 +153,11 @@ int main(int argc, char* argv[]) {
             return 0;
         } 
         else if (target_shell == "zsh") {
-            std::cout << "zmodload zsh/datetime 2>/dev/null\n"
+            std::cout << "if [ -n \"${_BS_ZSH_INIT:-}\" ]; then\n"
+                    << "    return 0;\n"
+                    << "fi\n"
+                    << "_BS_ZSH_INIT=1;\n"
+                    << "zmodload zsh/datetime 2>/dev/null\n"
                     << "bs_start_time=\"\";\n"
                     << "beautiful_shell_preexec() { bs_start_time=$EPOCHREALTIME }\n"
                     << "beautiful_shell_precmd() {\n"
